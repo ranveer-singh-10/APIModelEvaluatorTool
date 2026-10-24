@@ -393,4 +393,4 @@ def structured_data_tester():
 #tester_with_temp()
 #tester_with_stream()
 #structured_data_tester()
-evaluate("claude-haiku-5-5", "What is quantum computing? Answer in one sentence")
+#evaluate("claude-haiku-5-5", "What is quantum computing? Answer in one sentence")
