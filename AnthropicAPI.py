@@ -8,6 +8,26 @@ import os
 SPACER ="--------------------------"
 client = Anthropic()
 
+# USD per million tokens. Estimates only - check against https://claude.com/pricing
+MODEL_PRICING = {
+    "claude-fable-5-1":  {"input": 10.00, "output": 50.00, "cache_read": 0.25},
+    "claude-opus-5-5":   {"input": 4.00,  "output": 20.00, "cache_read": 0.20},
+    "claude-opus-5":     {"input": 5.00,  "output": 25.00, "cache_read": 0.50},
+    "claude-sonnet-5-5": {"input": 2.00,  "output": 10.00, "cache_read": 0.20},
+    "claude-sonnet-5":   {"input": 2.00,  "output": 10.00, "cache_read": 0.20},
+    "claude-sonnet-4-6": {"input": 3.00,  "output": 15.00, "cache_read": 0.30},
+    "claude-haiku-5-5":  {"input": 0.10,  "output": 0.50,  "cache_read": 0.01},
+    "claude-haiku-4-5":  {"input": 1.00,  "output": 5.00,  "cache_read": 0.10},
+}
+
+# Haiku 5.5 charges more once the prompt goes over 100K tokens
+LONG_CONTEXT_PRICING = {
+    "claude-haiku-5-5": {"threshold": 100_000, "input": 0.50, "output": 2.50, "cache_read": 0.05},
+}
+
+CACHE_WRITE_5M_MULTIPLIER = 1.25
+CACHE_WRITE_1H_MULTIPLIER = 2.0
+
 def list_models():
     client = Anthropic(
         api_key=os.environ.get(
@@ -85,8 +105,61 @@ def text_from_message(message):
         [block.text for block in message.content if block.type == "text"]
     )
 
-def chat(messages,model="claude-haiku-5-5", system=None,temperature=1.0, stream=True, output_config=None, tools=None, return_full_response=False, fine_grained=False):
+def estimate_cost(model, usage):
+    pricing = MODEL_PRICING.get(model)
+    if pricing is None:
+        print(f"WARNING: no pricing for model '{model}', cost not estimated")
+        return None
+
+    input_tokens = usage.input_tokens or 0
+    output_tokens = usage.output_tokens or 0
+    cache_read_tokens = usage.cache_read_input_tokens or 0
+    cache_write_tokens = usage.cache_creation_input_tokens or 0
+
+    long_context = LONG_CONTEXT_PRICING.get(model)
+    prompt_tokens = input_tokens + cache_read_tokens + cache_write_tokens
+    if long_context and prompt_tokens > long_context["threshold"]:
+        pricing = long_context
+
+    # Split cache writes by TTL when the API reports it, otherwise assume the 5 minute TTL
+    cache_creation = getattr(usage, "cache_creation", None)
+    if cache_creation is not None:
+        write_5m = cache_creation.ephemeral_5m_input_tokens or 0
+        write_1h = cache_creation.ephemeral_1h_input_tokens or 0
+    else:
+        write_5m, write_1h = cache_write_tokens, 0
+
+    per_token = 1_000_000
+    input_cost = input_tokens * pricing["input"] / per_token
+    output_cost = output_tokens * pricing["output"] / per_token
+    cache_read_cost = cache_read_tokens * pricing["cache_read"] / per_token
+    cache_write_cost = (
+        write_5m * pricing["input"] * CACHE_WRITE_5M_MULTIPLIER
+        + write_1h * pricing["input"] * CACHE_WRITE_1H_MULTIPLIER
+    ) / per_token
+
+    return {
+        "input_cost": input_cost,
+        "output_cost": output_cost,
+        "cache_write_cost": cache_write_cost,
+        "cache_read_cost": cache_read_cost,
+        "total_cost": input_cost + output_cost + cache_write_cost + cache_read_cost,
+    }
+
+def usage_summary(model, usage):
+    summary = {
+        "input_tokens": usage.input_tokens or 0,
+        "output_tokens": usage.output_tokens or 0,
+        "cache_read_input_tokens": usage.cache_read_input_tokens or 0,
+        "cache_creation_input_tokens": usage.cache_creation_input_tokens or 0,
+    }
+    summary["total_tokens"] = sum(summary.values())
+    summary["cost"] = estimate_cost(model, usage)
+    return summary
+
+def chat(messages,model="claude-haiku-5-5", system=None,temperature=1.0, stream=True, output_config=None, tools=None, return_full_response=False, fine_grained=False, return_usage=False):
     #client = Anthropic()
+    # temperature is accepted but no longer sent: API version 2026-10-21 rejects sampling parameters with a 400
     params = {
         "model": model,
         "max_tokens": 4000,
@@ -107,26 +180,57 @@ def chat(messages,model="claude-haiku-5-5", system=None,temperature=1.0, stream=
             ]
         params["tools"] = tools
 
-    extra = {"temperature": temperature} if temperature is not None else {}
-
     if stream:
-        with client.messages.stream(**params, extra_body=extra) as message:
+        with client.messages.stream(**params) as message:
+            # One pass over the events: a second loop (e.g. text_stream) would find the stream already used up
             for event in message:
-                if event.type == "input_json":
+                if event.type == "text":
+                    print(event.text, end="", flush=True)
+                elif event.type == "input_json":
                     print(event.partial_json, end="", flush=True)
-            for text in message.text_stream:
-                print(text, end="")
+            print()
             final = message.get_final_message()
-        if return_full_response:
-            return final
-        else:
-            return "".join(block.text for block in final.content if block.type == "text")
     else:
-        message = client.messages.create(**params, extra_body={"temperature": temperature})
-        if return_full_response:
-            return message
-        else:
-            return "".join(block.text for block in message.content if block.type == "text")
+        final = client.messages.create(**params)
+
+    if return_full_response:
+        result = final
+    else:
+        result = "".join(block.text for block in final.content if block.type == "text")
+
+    if return_usage:
+        return result, usage_summary(model, final.usage)
+    return result
+
+def evaluate(model, request, system=None):
+    if isinstance(request, str):
+        messages = []
+        add_user_message(messages, request)
+    else:
+        messages = request
+
+    response, usage = chat(messages, model=model, system=system, stream=False, return_full_response=True, return_usage=True)
+
+    print(f"MODEL: {model}")
+    print(SPACER)
+    print(text_from_message(response))
+    print(SPACER)
+    print(f"stop_reason: {response.stop_reason}")
+    print(f"Input tokens:       {usage['input_tokens']}")
+    print(f"Output tokens:      {usage['output_tokens']}")
+    print(f"Cache read tokens:  {usage['cache_read_input_tokens']}")
+    print(f"Cache write tokens: {usage['cache_creation_input_tokens']}")
+    print(f"Total tokens:       {usage['total_tokens']}")
+
+    cost = usage["cost"]
+    if cost:
+        print(f"Input cost:         ${cost['input_cost']:.6f}")
+        print(f"Output cost:        ${cost['output_cost']:.6f}")
+        print(f"Cache cost:         ${cost['cache_write_cost'] + cost['cache_read_cost']:.6f}")
+        print(f"Estimated total:    ${cost['total_cost']:.6f}")
+    print(SPACER)
+
+    return {"model": model, "response": response, "usage": usage}
 
 def show_web_search_response(response):
     print(f"stop_reason: {response.stop_reason}")
@@ -289,3 +393,4 @@ def structured_data_tester():
 #tester_with_temp()
 #tester_with_stream()
 #structured_data_tester()
+evaluate("claude-haiku-5-5", "What is quantum computing? Answer in one sentence")
