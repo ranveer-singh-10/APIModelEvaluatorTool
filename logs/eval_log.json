@@ -205,5 +205,359 @@
         "error": null
       }
     ]
+  },
+  {
+    "timestamp": "2026-10-24T23:26:35.272218+00:00",
+    "type": "evaluate_all_models",
+    "prompt": "How hot is the Sun?",
+    "system": null,
+    "total_cost": 0.0448582,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "seconds": 4.20397629999934,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies dramatically depending on which part you mean:\n\n- **Core:** About 15 million °C (27 million °F). This is where nuclear fusion happens, converting hydrogen into helium.\n- **Surface (photosphere):** About 5,500 °C (10,000 °F). This is the visible \"surface\" that emits most of the light we see.\n- **Sunspots:** Cooler regions on the surface, around 3,500–4,000 °C, which is why they look dark by comparison.\n- **Corona (outer atmosphere):** Surprisingly, 1–3 million °C. Why the corona is so much hotter than the surface below it is still an active area of research, though magnetic activity is thought to play a major role.\n\nSo the short answer: roughly 5,500 °C at the surface and about 15 million °C at the center.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 270,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 287,
+          "cost": {
+            "input_cost": 0.00017,
+            "output_cost": 0.0135,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.01367
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "seconds": 4.50686400000086,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies a lot depending on where you measure:\n\n- **Core:** About **15 million °C** (27 million °F). This is where nuclear fusion turns hydrogen into helium.\n- **Surface (photosphere):** About **5,500 °C** (about 10,000 °F). This is the visible \"surface\" that emits most of the sunlight we see.\n- **Sunspots:** Cooler patches on the surface, around **3,500–4,500 °C**, which is why they look darker.\n- **Chromosphere:** The layer just above the surface heats up with altitude, from about 4,000 °C to roughly 20,000 °C.\n- **Corona (outer atmosphere):** Surprisingly hot, at **1–3 million °C** or more. Why the corona is so much hotter than the surface is still an active area of research, known as the \"coronal heating problem.\"",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 378,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 395,
+          "cost": {
+            "input_cost": 6.8e-05,
+            "output_cost": 0.00756,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.007628
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "seconds": 7.709140400000251,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies dramatically depending on which layer you're talking about:\n\n**Core:** ~15 million °C (27 million °F) — this is where nuclear fusion converts hydrogen into helium, powering the entire star.\n\n**Radiative and convective zones:** Temperature drops steadily outward, from about 7 million °C near the core's edge down to roughly 2 million °C, then to about 5,500 °C at the top of the convective zone.\n\n**Surface (photosphere):** ~5,500 °C (9,900 °F). This is the visible \"surface\" we see, and it's the coolest part of the Sun. Sunspots are cooler still, around 3,500 °C, which is why they look dark by comparison.\n\n**Chromosphere:** Rises from about 4,000 °C to 20,000 °C.\n\n**Corona:** 1–3 million °C (and even hotter in solar flares). \n\nThat last one is one of the great puzzles in solar physics: the Sun's outer atmosphere is hundreds of times hotter than its surface, even though it's farther from the heat source. This \"coronal heating problem\" is thought to involve magnetic field activity — possibly tiny magnetic reconnection events called nanoflares, or magnetic waves transporting energy outward. NASA's Parker Solar Probe has been flying through the corona since 2021 to investigate.",
+        "usage": {
+          "input_tokens": 15,
+          "output_tokens": 508,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 523,
+          "cost": {
+            "input_cost": 7.5e-05,
+            "output_cost": 0.0127,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.012775
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "seconds": 3.3884213999990607,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies a lot depending on which part you measure:\n\n- **Core:** about 15 million °C (27 million °F). This is where nuclear fusion takes place.\n- **Radiative and convective zones:** the temperature falls steadily from the core outward, from several million °C to about 2 million °C at the top of the convective zone.\n- **Surface (photosphere):** about 5,500 °C (9,900 °F). This is the visible \"surface\" that gives off sunlight.\n- **Chromosphere:** the layer above the surface, where temperatures rise to roughly 4,000–25,000 °C.\n- **Corona:** the outer atmosphere, at 1–3 million °C (about 2–5 million °F) and sometimes much hotter during flares.\n\nThe corona is far hotter than the surface even though it's farther from the core. This is the \"coronal heating problem,\" and scientists are still working out the details. Magnetic energy is thought to be the main cause, through processes such as magnetic reconnection and waves.\n\nSolar flares can briefly heat material to tens of millions of degrees.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 354,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 371,
+          "cost": {
+            "input_cost": 3.4e-05,
+            "output_cost": 0.00354,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0035740000000000004
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "seconds": 4.66184069999872,
+        "stop_reason": "end_turn",
+        "response": "# The Sun's Temperature\n\nThe Sun has different temperatures depending on which layer you're measuring:\n\n## Core\n- **~15 million °C (27 million °F)**\n- This is where nuclear fusion occurs, converting hydrogen into helium\n\n## Surface (Photosphere)\n- **~5,500°C (10,000°F)**\n- This is the visible \"surface\" we see from Earth\n\n## Corona (Outer Atmosphere)\n- **1-3 million °C (2-5 million °F)**\n- Surprisingly, this is much hotter than the surface below it\n\n## Why does the corona mystery exist?\nScientists are still studying why the corona is so much hotter than the photosphere beneath it—this is known as the **\"coronal heating problem.\"** Leading theories involve magnetic field interactions and wave energy transfer, but it remains an active area of solar physics research.\n\n---\n\n**Quick comparison:** If the Sun's surface were as hot as its core, it would vaporize everything in the solar system almost instantly—fusion-level temperatures are almost incomprehensibly extreme!\n\nWould you like more details about any particular layer or how these temperatures are measured?",
+        "usage": {
+          "input_tokens": 15,
+          "output_tokens": 377,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 392,
+          "cost": {
+            "input_cost": 3e-05,
+            "output_cost": 0.00377,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0038
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "seconds": 4.474438699999155,
+        "stop_reason": "end_turn",
+        "response": "## The Sun's Temperature\n\nThe Sun's temperature varies significantly depending on the layer:\n\n- **Core**: ~15 million °C (27 million °F) - where nuclear fusion occurs\n- **Radiative Zone**: temperatures drop from ~7 million °C outward\n- **Convection Zone**: ~2 million °C down to ~500,000°C\n- **Photosphere** (visible surface): ~5,500°C (10,000°F)\n- **Chromosphere**: ~20,000°C\n- **Corona** (outer atmosphere): ~1-3 million °C\n\n### Interesting Note\nThe corona is paradoxically *much hotter* than the surface, which is still not fully understood by scientists. This is known as the **coronal heating problem**.",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 179,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 192,
+          "cost": {
+            "input_cost": 3.9e-05,
+            "output_cost": 0.002685,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.002724
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "seconds": 2.1393816999989212,
+        "stop_reason": "end_turn",
+        "response": "The Sun's **surface** (the photosphere) is about **5,500°C (about 10,000°F)**, or roughly 5,800 kelvin.\n\nIts temperature varies by layer:\n\n- **Core:** about **15 million °C** (27 million °F), where nuclear fusion occurs.\n- **Radiative zone:** from about 2 million °C down to several million °C.\n- **Surface (photosphere):** about **5,500°C**.\n- **Sunspots:** about 3,500–4,000°C, which look dark only because they're cooler than their surroundings.\n- **Corona (outer atmosphere):** over **1 million °C**, and sometimes reaching several million °C. Why it's so much hotter than the surface remains an active area of research.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 335,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 352,
+          "cost": {
+            "input_cost": 1.7000000000000002e-06,
+            "output_cost": 0.0001675,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0001692
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "seconds": 1.741256400000566,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies depending on which part you're measuring:\n\n- **Surface (photosphere)**: About 5,500°C (9,900°F or 5,778 K)\n\n- **Core**: About 15 million°C (27 million°F or 15 million K)\n\nThe core is where nuclear fusion occurs, converting hydrogen into helium and releasing the enormous energy that powers the Sun and sustains life on Earth.",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 101,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 114,
+          "cost": {
+            "input_cost": 1.3e-05,
+            "output_cost": 0.000505,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000518
+          }
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-10-24T23:28:50.941937+00:00",
+    "type": "evaluate_all_models",
+    "prompt": "Say Hi",
+    "system": null,
+    "total_cost": 0.0043443,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "seconds": 1.2960014000000228,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 17,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 30,
+          "cost": {
+            "input_cost": 0.00013,
+            "output_cost": 0.00085,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00098
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "seconds": 1.354423200000383,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 17,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 30,
+          "cost": {
+            "input_cost": 5.2e-05,
+            "output_cost": 0.00034,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00039200000000000004
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "seconds": 1.5517663999999058,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How's it going? Anything I can help you with today?",
+        "usage": {
+          "input_tokens": 11,
+          "output_tokens": 70,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 81,
+          "cost": {
+            "input_cost": 5.5e-05,
+            "output_cost": 0.00175,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.001805
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "seconds": 1.0880450999993627,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 17,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 30,
+          "cost": {
+            "input_cost": 2.6e-05,
+            "output_cost": 0.00017,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00019600000000000002
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "seconds": 1.3315183999984583,
+        "stop_reason": "end_turn",
+        "response": "Hi there! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 11,
+          "output_tokens": 45,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 56,
+          "cost": {
+            "input_cost": 2.2e-05,
+            "output_cost": 0.00045,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000472
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "seconds": 1.535091799998554,
+        "stop_reason": "end_turn",
+        "response": "Hi there! 👋 How are you doing? Is there something I can help you with today?",
+        "usage": {
+          "input_tokens": 9,
+          "output_tokens": 25,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 34,
+          "cost": {
+            "input_cost": 2.7e-05,
+            "output_cost": 0.000375,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000402
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "seconds": 0.9194389000003866,
+        "stop_reason": "end_turn",
+        "response": "Hi there! How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 14,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 27,
+          "cost": {
+            "input_cost": 1.3e-06,
+            "output_cost": 7e-06,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 8.3e-06
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "seconds": 0.7051327999997739,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 9,
+          "output_tokens": 16,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 25,
+          "cost": {
+            "input_cost": 9e-06,
+            "output_cost": 8e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 8.900000000000001e-05
+          }
+        },
+        "error": null
+      }
+    ]
   }
 ]
