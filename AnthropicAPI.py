@@ -4,6 +4,7 @@ load_dotenv()
 from anthropic import Anthropic
 from anthropic.types import Message
 import os
+import time
 
 SPACER ="--------------------------"
 client = Anthropic()
@@ -232,6 +233,71 @@ def evaluate(model, request, system=None):
 
     return {"model": model, "response": response, "usage": usage}
 
+def evaluate_all_models(prompt, models=None, system=None, response_width=60):
+    models = models or list(MODEL_PRICING)
+    results = []
+
+    for model in models:
+        messages = []
+        add_user_message(messages, prompt)
+        print(f"Running {model}...")
+        start = time.perf_counter()
+        try:
+            response, usage = chat(messages, model=model, system=system, stream=False, return_full_response=True, return_usage=True)
+            results.append({
+                "model": model,
+                "seconds": time.perf_counter() - start,
+                "response": text_from_message(response),
+                "usage": usage,
+                "error": None,
+            })
+        except Exception as e:
+            # Keep going so one unavailable model doesn't stop the comparison
+            results.append({
+                "model": model,
+                "seconds": time.perf_counter() - start,
+                "response": "",
+                "usage": None,
+                "error": f"{type(e).__name__}: {e}",
+            })
+
+    headers = ["Model", "Time (s)", "Input", "Output", "Total", "Cost ($)", "Response"]
+    rows = []
+    for r in results:
+        usage = r["usage"]
+        if usage:
+            cost = usage["cost"]["total_cost"] if usage["cost"] else None
+            text = " ".join(r["response"].split())
+            rows.append([
+                r["model"],
+                f"{r['seconds']:.2f}",
+                str(usage["input_tokens"]),
+                str(usage["output_tokens"]),
+                str(usage["total_tokens"]),
+                f"{cost:.6f}" if cost is not None else "n/a",
+                text if len(text) <= response_width else text[:response_width - 3] + "...",
+            ])
+        else:
+            error = r["error"]
+            rows.append([r["model"], f"{r['seconds']:.2f}", "-", "-", "-", "-",
+                         "ERROR: " + (error if len(error) <= response_width else error[:response_width - 3] + "...")])
+
+    widths = [max(len(row[i]) for row in [headers] + rows) for i in range(len(headers))]
+    numeric = {1, 2, 3, 4, 5}
+
+    def format_row(row):
+        return " | ".join(cell.rjust(widths[i]) if i in numeric else cell.ljust(widths[i]) for i, cell in enumerate(row))
+
+    print()
+    print(f"PROMPT: {prompt}")
+    print(format_row(headers))
+    print("-+-".join("-" * w for w in widths))
+    for row in rows:
+        print(format_row(row))
+    print()
+
+    return results
+
 def show_web_search_response(response):
     print(f"stop_reason: {response.stop_reason}")
     print(f"Searches used: {response.usage.server_tool_use.web_search_requests}\n")
@@ -394,3 +460,4 @@ def structured_data_tester():
 #tester_with_stream()
 #structured_data_tester()
 #evaluate("claude-haiku-5-5", "What is quantum computing? Answer in one sentence")
+#evaluate_all_models("What is quantum computing? Answer in one sentence")
