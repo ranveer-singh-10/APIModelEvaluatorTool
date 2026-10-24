@@ -31,14 +31,12 @@ The file has no `main`; experiments are the `tester*` / `structured_data_tester`
 - `view_logs()` starts a local server on 127.0.0.1 (port 8765, or the next free one) in a daemon thread and opens `web/log_viewer.html`, a self-contained page with no dependencies for filtering, charting and exporting the log. The server answers only `/` (the page) and `/log.json` (the log file) and returns 404 for everything else, so it never exposes the project folder or `.env`. Keep it that way if you change it. The page can also open a log file directly, without the server.
 - Conversation history is a plain list of dicts built with `add_user_message` / `add_assistant_message`. The `_multi` variants accept a full `Message` and copy its `content` blocks — use these in tool-use loops so `tool_use` blocks are preserved.
 - `build_tooluse_json` builds a `tool_result` payload but takes the ID from `content[0]`, which is wrong when Claude emits text before the tool call.
-- Known bug: in streaming mode `chat()` iterates the raw events first, which exhausts the stream, so the subsequent `text_stream` loop prints nothing (the final returned text is still correct).
+- Streaming: `chat()` goes through the stream's events once, printing text and tool-input chunks as they arrive. Don't add a second loop such as `text_stream`: the first loop uses up the stream.
 
 ## Workflow for any feature or task
 1. **Explore**: read the relevant files first. Don't edit anything yet.
 2. **Plan**: write a short numbered plan (files to change, approach, tests).
    Then STOP and wait for my approval.
-3. **Code**: only after I approve. For core logic (checker, can_place,
-   place_word, dynamic placement), give hints or review my code instead
-   of writing it, unless I explicitly ask.
+3. **Code**: only after I approve.
 4. **Commit**: suggest a commit message and wait. Don't run git commit
    yourself.
