@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eval Log Viewer</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f2;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e2e1dc;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7a7974;
+  --series-1: #2a78d6;
+  --accent: #2a78d6;
+  --accent-ink: #1d5fae;
+  --accent-bg: #e8eefa;
+  --grid: #e8e7e2;
+  --critical: #b42318;
+  --critical-bg: #fdecea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --border: #2f2f2c;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --series-1: #3987e5;
+    --accent: #3987e5;
+    --accent-ink: #8ab8f0;
+    --accent-bg: #1f2b3d;
+    --grid: #2a2a27;
+    --critical: #f07167;
+    --critical-bg: #3a1d1b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --border: #2f2f2c;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8f8e86;
+  --series-1: #3987e5;
+  --accent: #3987e5;
+  --accent-ink: #8ab8f0;
+  --accent-bg: #1f2b3d;
+  --grid: #2a2a27;
+  --critical: #f07167;
+  --critical-bg: #3a1d1b;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.page { max-width: 1280px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+button, input, select { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 16px; }
+.source { color: var(--text-secondary); font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer;
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn-link { border: none; background: none; color: var(--accent-ink); padding: 2px 4px; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.field input, .field select {
+  border: 1px solid var(--border); background: var(--bg); border-radius: 8px; padding: 6px 8px;
+  color: var(--text-primary); font-size: 14px;
+}
+.field-search { flex: 1 1 220px; }
+.models-filter { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: pointer; color: var(--text-primary); font-size: 13px; background: var(--bg); }
+.chip input { margin: 0; accent-color: var(--accent); }
+
+.notice { border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid var(--border); background: var(--surface); }
+.notice.error { border-color: var(--critical); background: var(--critical-bg); }
+.notice code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.tile-label { font-size: 12px; color: var(--text-secondary); }
+.tile-value { font-size: 24px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+th button { border: none; background: none; padding: 0; cursor: pointer; font-weight: 600; color: inherit; }
+tbody tr:last-child td { border-bottom: none; }
+.err-count { color: var(--critical); }
+
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+.chart { margin: 0; min-width: 0; }
+.chart figcaption { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.chart svg { display: block; overflow: visible; }
+.chart .bar { fill: var(--series-1); }
+.chart .hit { fill: transparent; cursor: default; outline: none; }
+.chart .row:hover .bar, .chart .row:focus-within .bar { opacity: 0.8; }
+.chart .row:hover .hover-bg, .chart .row:focus-within .hover-bg { fill: var(--surface-2); }
+.chart .hover-bg { fill: transparent; }
+.chart .label { fill: var(--text-secondary); font-size: 12px; }
+.chart .value { fill: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart .muted { fill: var(--text-muted); font-size: 12px; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .baseline { stroke: var(--border); stroke-width: 1; }
+.chart .tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+.tooltip {
+  position: fixed; z-index: 10; pointer-events: none; display: none;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); max-width: 260px;
+}
+.tooltip strong { display: block; font-size: 13px; }
+.tooltip .tt-sub { color: var(--text-secondary); }
+
+.runs-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.runs-head h2 { margin: 0; }
+.run { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: var(--surface); overflow: hidden; }
+.run-head {
+  width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  border: none; background: none; text-align: left; padding: 12px 14px; cursor: pointer;
+}
+.run-head:hover { background: var(--surface-2); }
+.run-time { font-weight: 600; }
+.run-models { color: var(--text-secondary); }
+.run-cost { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+.chev { color: var(--text-muted); transition: transform 0.15s; }
+.run-head[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-bg); color: var(--accent-ink); }
+.badge-error { background: var(--critical-bg); color: var(--critical); }
+.run-body { padding: 0 14px 14px; }
+.prompt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.prompt.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-secondary); }
+.label-sm { font-size: 12px; color: var(--text-muted); margin: 10px 0 2px; }
+
+.results { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(280px, 1fr); gap: 12px; overflow-x: auto; margin-top: 12px; padding-bottom: 4px; }
+.results.single { grid-auto-flow: row; grid-auto-columns: auto; }
+.result { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--bg); min-width: 0; display: flex; flex-direction: column; }
+.result-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; margin: 0 0 10px; }
+.metrics div { background: var(--surface); border-radius: 6px; padding: 4px 8px; }
+.metrics dt { font-size: 11px; color: var(--text-muted); }
+.metrics dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.response { white-space: pre-wrap; overflow-wrap: anywhere; }
+.error-box { border-radius: 8px; padding: 8px 10px; background: var(--critical-bg); color: var(--critical); overflow-wrap: anywhere; }
+.empty { color: var(--text-secondary); padding: 8px 0; }
+
+.drop-overlay {
+  position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center;
+  background: rgba(42, 120, 214, 0.15); border: 3px dashed var(--accent); font-size: 18px; font-weight: 600;
+}
+.drop-overlay.show { display: flex; }
+
+@media (max-width: 640px) {
+  .tile-value { font-size: 20px; }
+  .run-cost { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <div>
+      <h1>Eval Log Viewer</h1>
+      <div class="source" id="source">No log loaded</div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="reload" type="button">Reload</button>
+      <button class="btn" id="open" type="button">Open log file</button>
+      <input type="file" id="file-input" accept=".json,application/json" hidden>
+      <button class="btn btn-primary" id="export" type="button">Export CSV</button>
+      <button class="btn" id="theme" type="button"></button>
+    </div>
+  </div>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <section class="panel" aria-label="Filters">
+    <div class="filters">
+      <label class="field field-search">Search prompts and responses
+        <input type="search" id="f-text" placeholder="e.g. quantum">
+      </label>
+      <label class="field">Run type
+        <select id="f-type">
+          <option value="all">All</option>
+          <option value="evaluate">Single model (evaluate)</option>
+          <option value="evaluate_all_models">All models (evaluate_all_models)</option>
+        </select>
+      </label>
+      <label class="field">Status
+        <select id="f-status">
+          <option value="all">All</option>
+          <option value="ok">Succeeded</option>
+          <option value="error">Errors</option>
+        </select>
+      </label>
+      <label class="field">From
+        <input type="date" id="f-from">
+      </label>
+      <label class="field">To
+        <input type="date" id="f-to">
+      </label>
+      <button class="btn" id="f-clear" type="button">Clear filters</button>
+      <div class="models-filter" id="f-models"></div>
+    </div>
+  </section>
+
+  <div class="tiles" id="tiles"></div>
+
+  <section class="panel">
+    <h2>Models</h2>
+    <div class="table-wrap" id="model-table"></div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="panel">
+    <div class="runs-head">
+      <h2 id="runs-title">Runs</h2>
+      <label class="field">Sort
+        <select id="run-sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="cost">Highest cost</option>
+        </select>
+      </label>
+    </div>
+    <div id="runs"></div>
+  </section>
+</div>
+
+<div class="tooltip" id="tooltip" role="tooltip"></div>
+<div class="drop-overlay" id="drop">Drop the log file to open it</div>
+
+<script>
+"use strict";
+
+const $ = (sel) => document.querySelector(sel);
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+// Builds DOM nodes. Strings become text nodes, so log content (model output) is never parsed as HTML.
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  setAttrs(el, attrs);
+  appendAll(el, children);
+  return el;
+}
+function s(tag, attrs, ...children) {
+  const el = document.createElementNS(SVG_NS, tag);
+  setAttrs(el, attrs);
+  appendAll(el, children);
+  return el;
+}
+function setAttrs(el, attrs) {
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.setAttribute("class", v);
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+}
+function appendAll(el, children) {
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    el.append(c instanceof Node ? c : String(c));
+  }
+}
+
+const num = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+
+function fmtCost(v) {
+  if (v == null) return "—";
+  if (v === 0) return "$0";
+  const a = Math.abs(v);
+  return "$" + v.toFixed(a >= 1 ? 2 : a >= 0.01 ? 4 : 6);
+}
+const fmtSec = (v) => (v == null ? "—" : v.toFixed(2) + " s");
+const fmtInt = (v) => (v == null ? "—" : Math.round(v).toLocaleString());
+function fmtDate(d, raw) {
+  if (!d) return raw || "Unknown time";
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+function localDay(d) {
+  if (!d) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const state = {
+  entries: [],
+  rows: [],
+  modelOrder: [],
+  source: "",
+  excludedModels: new Set(),
+  filters: { text: "", type: "all", status: "all", from: "", to: "" },
+  modelSort: { key: null, dir: 1 },
+  runSort: "newest",
+  expanded: new Set(),
+  runLimit: 50,
+  chartData: [],
+};
+
+// ---------- Loading ----------
+
+// A prompt logged as a messages list is shown as its user text
+function promptText(p) {
+  if (p == null) return "";
+  if (typeof p === "string") return p;
+  if (Array.isArray(p)) {
+    const parts = [];
+    for (const m of p) {
+      if (!m || m.role !== "user") continue;
+      if (typeof m.content === "string") parts.push(m.content);
+      else if (Array.isArray(m.content)) {
+        for (const b of m.content) if (b && typeof b.text === "string") parts.push(b.text);
+      }
+    }
+    if (parts.length) return parts.join("\n\n");
+  }
+  return JSON.stringify(p, null, 2);
+}
+
+function parseLog(text) {
+  if (!text.trim()) return [];
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error("The log file is not valid JSON: " + e.message);
+  }
+}
+
+function loadEntries(data, source) {
+  if (!Array.isArray(data)) throw new Error("The log should be a JSON array of runs.");
+  state.entries = data;
+  state.source = source;
+  state.expanded.clear();
+  state.runLimit = 50;
+  state.rows = [];
+  state.modelOrder = [];
+
+  data.forEach((e, runId) => {
+    const results = Array.isArray(e && e.results) ? e.results : [];
+    const date = e && e.timestamp ? new Date(e.timestamp) : null;
+    for (const r of results) {
+      const usage = r.usage || null;
+      const cost = usage && usage.cost ? usage.cost : null;
+      const model = r.model || "unknown";
+      if (!state.modelOrder.includes(model)) state.modelOrder.push(model);
+      state.rows.push({
+        runId,
+        timestamp: e.timestamp || "",
+        date: date && !isNaN(date) ? date : null,
+        type: e.type || "unknown",
+        prompt: promptText(e.prompt),
+        system: e.system ? String(e.system) : "",
+        model,
+        seconds: num(r.seconds),
+        stopReason: r.stop_reason || "",
+        response: r.response || "",
+        usage,
+        cost,
+        totalCost: cost ? num(cost.total_cost) : null,
+        error: r.error || null,
+      });
+    }
+  });
+
+  hideNotice();
+  if (!data.length) showNotice("The log is empty. Run evaluate(...) or evaluate_all_models(...) with log=True, then press Reload.");
+  renderModelFilter();
+  render();
+}
+
+async function loadFromServer() {
+  if (!location.protocol.startsWith("http")) {
+    showNotice("This page was opened from disk, so it can't load the log by itself. Use Open log file (or drag the file onto the page), or run view_logs() in Python.");
+    $("#source").textContent = "No log loaded";
+    render();
+    return;
+  }
+  try {
+    const res = await fetch("log.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(`The server returned HTTP ${res.status}.`);
+    loadEntries(parseLog(await res.text()), "Served by view_logs()");
+  } catch (err) {
+    showNotice(`Couldn't load the log: ${err.message} Make sure view_logs() is still running, or use Open log file.`, true);
+  }
+}
+
+function loadFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      loadEntries(parseLog(String(reader.result)), file.name);
+    } catch (err) {
+      showNotice(err.message, true);
+    }
+  };
+  reader.onerror = () => showNotice("Couldn't read that file.", true);
+  reader.readAsText(file);
+}
+
+function showNotice(text, isError) {
+  const n = $("#notice");
+  n.textContent = text;
+  n.className = isError ? "notice error" : "notice";
+  n.hidden = false;
+}
+function hideNotice() {
+  $("#notice").hidden = true;
+}
+
+// ---------- Filtering ----------
+
+function filteredRows() {
+  const f = state.filters;
+  const q = f.text.trim().toLowerCase();
+  return state.rows.filter((r) => {
+    if (state.excludedModels.has(r.model)) return false;
+    if (f.type !== "all" && r.type !== f.type) return false;
+    if (f.status === "ok" && r.error) return false;
+    if (f.status === "error" && !r.error) return false;
+    if (f.from || f.to) {
+      const d = localDay(r.date);
+      if (!d) return false;
+      if (f.from && d < f.from) return false;
+      if (f.to && d > f.to) return false;
+    }
+    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model].some((t) => t.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+function renderModelFilter() {
+  const box = $("#f-models");
+  box.replaceChildren();
+  if (!state.modelOrder.length) return;
+  box.append(
+    h("span", {}, "Models:"),
+    ...state.modelOrder.map((m) =>
+      h("label", { class: "chip" },
+        h("input", {
+          type: "checkbox",
+          checked: !state.excludedModels.has(m),
+          onchange: (e) => {
+            if (e.target.checked) state.excludedModels.delete(m);
+            else state.excludedModels.add(m);
+            render();
+          },
+        }),
+        m)
+    ),
+    h("button", { class: "btn-link", type: "button", onclick: () => { state.excludedModels.clear(); renderModelFilter(); render(); } }, "All"),
+    h("button", { class: "btn-link", type: "button", onclick: () => { state.modelOrder.forEach((m) => state.excludedModels.add(m)); renderModelFilter(); render(); } }, "None"),
+  );
+}
+
+// ---------- Aggregation ----------
+
+function aggregate(rows) {
+  const byModel = new Map();
+  for (const m of state.modelOrder) byModel.set(m, null);
+  for (const r of rows) {
+    let a = byModel.get(r.model);
+    if (!a) {
+      a = { model: r.model, calls: 0, errors: 0, costSum: 0, costN: 0, secSum: 0, secN: 0, outSum: 0, outN: 0 };
+      byModel.set(r.model, a);
+    }
+    a.calls++;
+    if (r.error) { a.errors++; continue; }
+    if (r.totalCost != null) { a.costSum += r.totalCost; a.costN++; }
+    if (r.seconds != null) { a.secSum += r.seconds; a.secN++; }
+    const out = r.usage ? num(r.usage.output_tokens) : null;
+    if (out != null) { a.outSum += out; a.outN++; }
+  }
+  return [...byModel.values()].filter(Boolean).map((a) => ({
+    ...a,
+    totalCost: a.costN ? a.costSum : null,
+    avgCost: a.costN ? a.costSum / a.costN : null,
+    avgSec: a.secN ? a.secSum / a.secN : null,
+    avgOut: a.outN ? a.outSum / a.outN : null,
+  }));
+}
+
+// ---------- Rendering ----------
+
+function render() {
+  const rows = filteredRows();
+  const runCount = new Set(rows.map((r) => r.runId)).size;
+  $("#source").textContent = state.entries.length
+    ? `${state.source} · ${plural(state.entries.length, "run")} in log`
+    : state.source || "No log loaded";
+  renderTiles(rows, runCount);
+  const agg = aggregate(rows);
+  renderModelTable(agg);
+  renderCharts(agg);
+  renderRuns(rows);
+}
+
+function renderTiles(rows, runCount) {
+  const costs = rows.map((r) => r.totalCost).filter((v) => v != null);
+  const spend = costs.reduce((a, b) => a + b, 0);
+  const errors = rows.filter((r) => r.error).length;
+  const tile = (label, value) => h("div", { class: "tile" }, h("div", { class: "tile-label" }, label), h("div", { class: "tile-value" }, value));
+  $("#tiles").replaceChildren(
+    tile("Runs", runCount.toLocaleString()),
+    tile("Model calls", rows.length.toLocaleString()),
+    tile("Total spend", fmtCost(costs.length ? spend : null)),
+    tile("Avg cost per call", fmtCost(costs.length ? spend / costs.length : null)),
+    tile("Errors", errors.toLocaleString()),
+  );
+}
+
+const MODEL_COLUMNS = [
+  { key: "model", label: "Model", fmt: (v) => v },
+  { key: "calls", label: "Calls", fmt: (v) => v.toLocaleString() },
+  { key: "errors", label: "Errors", fmt: (v) => v.toLocaleString() },
+  { key: "totalCost", label: "Total cost", fmt: fmtCost },
+  { key: "avgCost", label: "Avg cost", fmt: fmtCost },
+  { key: "avgSec", label: "Avg time", fmt: fmtSec },
+  { key: "avgOut", label: "Avg output tokens", fmt: fmtInt },
+];
+
+function renderModelTable(agg) {
+  const wrap = $("#model-table");
+  if (!agg.length) {
+    wrap.replaceChildren(h("p", { class: "empty" }, "No model calls match the filters."));
+    return;
+  }
+  const { key, dir } = state.modelSort;
+  const rows = key ? [...agg].sort((a, b) => compare(a[key], b[key]) * dir) : agg;
+  const sortHeader = (col) => {
+    const active = state.modelSort.key === col.key;
+    const arrow = active ? (state.modelSort.dir === 1 ? " ▲" : " ▼") : "";
+    return h("th", { scope: "col", "aria-sort": active ? (state.modelSort.dir === 1 ? "ascending" : "descending") : null },
+      h("button", {
+        type: "button",
+        onclick: () => {
+          state.modelSort = active ? { key: col.key, dir: -state.modelSort.dir } : { key: col.key, dir: col.key === "model" ? 1 : -1 };
+          renderModelTable(agg);
+        },
+      }, col.label + arrow));
+  };
+  wrap.replaceChildren(
+    h("table", {},
+      h("thead", {}, h("tr", {}, MODEL_COLUMNS.map(sortHeader))),
+      h("tbody", {}, rows.map((a) =>
+        h("tr", {}, MODEL_COLUMNS.map((col) =>
+          h("td", { class: col.key === "errors" && a.errors ? "err-count" : null }, col.fmt(a[col.key]))))))));
+}
+
+// Nulls always sort last
+function compare(a, b) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return typeof a === "string" ? a.localeCompare(b) : a - b;
+}
+
+// ---------- Charts ----------
+
+function renderCharts(agg) {
+  state.chartData = [
+    { title: "Average cost per call", fmt: fmtCost, items: agg.map((a) => ({ model: a.model, value: a.avgCost, n: a.costN })) },
+    { title: "Average response time", fmt: fmtSec, items: agg.map((a) => ({ model: a.model, value: a.avgSec, n: a.secN })) },
+    { title: "Average output tokens", fmt: fmtInt, items: agg.map((a) => ({ model: a.model, value: a.avgOut, n: a.outN })) },
+  ];
+  drawCharts();
+}
+
+function drawCharts() {
+  const box = $("#charts");
+  box.replaceChildren();
+  if (!state.chartData.length || !state.chartData[0].items.length) return;
+  for (const chart of state.chartData) {
+    const fig = h("figure", { class: "chart" }, h("figcaption", {}, chart.title));
+    box.append(fig);
+    fig.append(barChart(fig.clientWidth || 320, chart));
+  }
+}
+
+function barChart(width, { title, fmt, items }) {
+  const band = 30, barH = 18, axisH = 22;
+  const labelW = Math.min(140, Math.max(90, width * 0.36));
+  const valueW = 78;
+  const plotX = labelW;
+  const plotW = Math.max(40, width - labelW - valueW);
+  const height = items.length * band + axisH;
+  const values = items.map((i) => i.value).filter((v) => v != null);
+  const max = values.length ? Math.max(...values) : 0;
+  const scale = (v) => (max > 0 ? (v / max) * plotW : 0);
+
+  const svg = s("svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${title} by model` });
+
+  // Recessive grid: quarter marks, with the zero line as the baseline
+  for (let i = 1; i <= 4; i++) {
+    const x = plotX + (plotW * i) / 4;
+    svg.append(s("line", { class: "gridline", x1: x, x2: x, y1: 0, y2: items.length * band }));
+  }
+  svg.append(s("line", { class: "baseline", x1: plotX, x2: plotX, y1: 0, y2: items.length * band }));
+  svg.append(s("text", { class: "tick", x: plotX, y: height - 6, "text-anchor": "start" }, fmt(0)));
+  if (max > 0) svg.append(s("text", { class: "tick", x: plotX + plotW, y: height - 6, "text-anchor": "end" }, fmt(max)));
+
+  const maxChars = Math.floor((labelW - 10) / 7);
+  items.forEach((item, i) => {
+    const y = i * band;
+    const barY = y + (band - barH) / 2;
+    const w = item.value != null ? scale(item.value) : 0;
+    const label = item.model.length > maxChars ? item.model.slice(0, maxChars - 1) + "…" : item.model;
+    const row = s("g", { class: "row" },
+      s("rect", { class: "hover-bg", x: 0, y, width, height: band, rx: 4 }),
+      s("text", { class: "label", x: labelW - 8, y: y + band / 2 + 4, "text-anchor": "end" }, label),
+      item.value != null && w > 0 ? s("path", { class: "bar", d: barPath(plotX, barY, w, barH, 4) }) : null,
+      item.value != null
+        ? s("text", { class: "value", x: plotX + w + 6, y: y + band / 2 + 4 }, fmt(item.value))
+        : s("text", { class: "muted", x: plotX + 6, y: y + band / 2 + 4 }, "no data"),
+    );
+    // Hit target covers the whole row, larger than the bar itself
+    const hit = s("rect", { class: "hit", x: 0, y, width, height: band, tabindex: 0, "aria-label": `${item.model}: ${fmt(item.value)}` });
+    const tip = () => [item.model, item.value != null ? fmt(item.value) : "No data", `Based on ${plural(item.n, "call")}`];
+    hit.addEventListener("mousemove", (e) => showTooltip(tip(), e.clientX, e.clientY));
+    hit.addEventListener("mouseleave", hideTooltip);
+    hit.addEventListener("focus", () => {
+      const r = hit.getBoundingClientRect();
+      showTooltip(tip(), r.left + plotX + w, r.top);
+    });
+    hit.addEventListener("blur", hideTooltip);
+    row.append(hit);
+    svg.append(row);
+  });
+  return svg;
+}
+
+// Square at the baseline, 4px rounded at the data end
+function barPath(x, y, w, hgt, r) {
+  r = Math.min(r, w, hgt / 2);
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + hgt - r}Q${x + w},${y + hgt} ${x + w - r},${y + hgt}H${x}Z`;
+}
+
+function showTooltip([title, value, sub], x, y) {
+  const t = $("#tooltip");
+  t.replaceChildren(h("strong", {}, title), h("div", { class: "num" }, value), h("div", { class: "tt-sub" }, sub));
+  t.style.display = "block";
+  const pad = 12;
+  const left = Math.min(x + pad, window.innerWidth - t.offsetWidth - pad);
+  const top = y - t.offsetHeight - pad < 0 ? y + pad : y - t.offsetHeight - pad;
+  t.style.left = Math.max(pad, left) + "px";
+  t.style.top = top + "px";
+}
+function hideTooltip() {
+  $("#tooltip").style.display = "none";
+}
+
+// ---------- Runs ----------
+
+function groupRuns(rows) {
+  const runs = new Map();
+  for (const r of rows) {
+    if (!runs.has(r.runId)) runs.set(r.runId, []);
+    runs.get(r.runId).push(r);
+  }
+  const list = [...runs.entries()].map(([runId, rs]) => ({
+    runId,
+    rows: rs,
+    date: rs[0].date,
+    cost: rs.reduce((a, r) => a + (r.totalCost || 0), 0),
+  }));
+  const time = (run) => (run.date ? run.date.getTime() : run.runId);
+  if (state.runSort === "newest") list.sort((a, b) => time(b) - time(a) || b.runId - a.runId);
+  else if (state.runSort === "oldest") list.sort((a, b) => time(a) - time(b) || a.runId - b.runId);
+  else list.sort((a, b) => b.cost - a.cost);
+  return list;
+}
+
+function renderRuns(rows) {
+  const box = $("#runs");
+  const runs = groupRuns(rows);
+  $("#runs-title").textContent = `Runs (${runs.length.toLocaleString()})`;
+  if (!runs.length) {
+    box.replaceChildren(h("p", { class: "empty" }, state.entries.length ? "No runs match the filters." : "No runs to show."));
+    return;
+  }
+  const shown = runs.slice(0, state.runLimit);
+  box.replaceChildren(...shown.map(runCard));
+  if (runs.length > shown.length) {
+    const more = Math.min(50, runs.length - shown.length);
+    box.append(h("button", { class: "btn", type: "button", onclick: () => { state.runLimit += 50; renderRuns(filteredRows()); } },
+      `Show ${more} more of ${runs.length - shown.length} remaining`));
+  }
+}
+
+function runCard(run) {
+  const { runId, rows } = run;
+  const entry = state.entries[runId] || {};
+  const first = rows[0];
+  const open = state.expanded.has(runId);
+  const total = Array.isArray(entry.results) ? entry.results.length : rows.length;
+  const errors = rows.filter((r) => r.error).length;
+  const hasCost = rows.some((r) => r.totalCost != null);
+  const typeLabel = first.type === "evaluate_all_models" ? "All models" : first.type === "evaluate" ? "Single model" : first.type;
+  const modelsLabel = rows.length === 1 && total === 1 ? first.model
+    : rows.length === total ? plural(total, "model") : `${rows.length} of ${total} models`;
+
+  const card = h("article", { class: "run" });
+  const head = h("button", {
+    class: "run-head", type: "button", "aria-expanded": String(open),
+    onclick: () => {
+      if (state.expanded.has(runId)) state.expanded.delete(runId);
+      else state.expanded.add(runId);
+      card.replaceWith(runCard(run));
+    },
+  },
+    h("span", { class: "chev", "aria-hidden": "true" }, "▸"),
+    h("span", { class: "run-time" }, fmtDate(first.date, first.timestamp)),
+    h("span", { class: "badge" }, typeLabel),
+    h("span", { class: "run-models" }, modelsLabel),
+    errors ? h("span", { class: "badge badge-error" }, `⚠ ${plural(errors, "error")}`) : null,
+    h("span", { class: "run-cost" }, hasCost ? fmtCost(run.cost) : "—"),
+  );
+
+  const body = h("div", { class: "run-body" },
+    h("p", { class: open ? "prompt" : "prompt clamp" }, first.prompt || "(no prompt)"));
+  if (open) {
+    if (first.system) body.append(h("div", { class: "label-sm" }, "System prompt"), h("p", { class: "prompt" }, first.system));
+    const single = rows.length === 1;
+    body.append(h("div", { class: single ? "results single" : "results" }, rows.map((r) => resultView(r, single))));
+  }
+  card.append(head, body);
+  return card;
+}
+
+function resultView(r, single) {
+  const u = r.usage || {};
+  const metric = (label, value) => h("div", {}, h("dt", {}, label), h("dd", {}, value));
+  const metrics = [
+    metric("Time", fmtSec(r.seconds)),
+    metric("Input", fmtInt(num(u.input_tokens))),
+    metric("Output", fmtInt(num(u.output_tokens))),
+    metric("Cost", fmtCost(r.totalCost)),
+  ];
+  if (num(u.cache_read_input_tokens)) metrics.push(metric("Cache read", fmtInt(u.cache_read_input_tokens)));
+  if (num(u.cache_creation_input_tokens)) metrics.push(metric("Cache write", fmtInt(u.cache_creation_input_tokens)));
+  if (single && r.cost) {
+    metrics.push(
+      metric("Input cost", fmtCost(num(r.cost.input_cost))),
+      metric("Output cost", fmtCost(num(r.cost.output_cost))),
+      metric("Cache cost", fmtCost((num(r.cost.cache_write_cost) || 0) + (num(r.cost.cache_read_cost) || 0))),
+    );
+  }
+  return h("article", { class: "result" },
+    h("div", { class: "result-head" },
+      h("strong", {}, r.model),
+      r.stopReason && r.stopReason !== "end_turn" ? h("span", { class: "badge" }, r.stopReason) : null),
+    r.error ? null : h("dl", { class: "metrics" }, metrics),
+    r.error
+      ? h("div", { class: "error-box", role: "note" }, h("strong", {}, "⚠ Error: "), r.error)
+      : h("div", { class: "response" }, r.response || "(empty response)"));
+}
+
+// ---------- CSV export ----------
+
+const CSV_COLUMNS = [
+  ["timestamp", (r) => r.timestamp],
+  ["type", (r) => r.type],
+  ["prompt", (r) => r.prompt],
+  ["system", (r) => r.system],
+  ["model", (r) => r.model],
+  ["seconds", (r) => r.seconds],
+  ["stop_reason", (r) => r.stopReason],
+  ["input_tokens", (r) => r.usage && r.usage.input_tokens],
+  ["output_tokens", (r) => r.usage && r.usage.output_tokens],
+  ["cache_read_input_tokens", (r) => r.usage && r.usage.cache_read_input_tokens],
+  ["cache_creation_input_tokens", (r) => r.usage && r.usage.cache_creation_input_tokens],
+  ["total_tokens", (r) => r.usage && r.usage.total_tokens],
+  ["input_cost", (r) => r.cost && r.cost.input_cost],
+  ["output_cost", (r) => r.cost && r.cost.output_cost],
+  ["cache_write_cost", (r) => r.cost && r.cost.cache_write_cost],
+  ["cache_read_cost", (r) => r.cost && r.cost.cache_read_cost],
+  ["total_cost", (r) => r.totalCost],
+  ["error", (r) => r.error],
+  ["response", (r) => r.response],
+];
+
+function csvCell(v) {
+  if (v == null) return "";
+  let text = String(v);
+  // Stop spreadsheets from running text cells as formulas
+  if (typeof v === "string" && /^[=+\-@\t\r]/.test(text)) text = "'" + text;
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportCsv() {
+  const rows = filteredRows();
+  if (!rows.length) {
+    showNotice("Nothing to export: no model calls match the filters.");
+    return;
+  }
+  const lines = [CSV_COLUMNS.map(([name]) => name).join(",")];
+  for (const r of rows) lines.push(CSV_COLUMNS.map(([, get]) => csvCell(get(r))).join(","));
+  // BOM so Excel reads the file as UTF-8
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = h("a", { href: URL.createObjectURL(blob), download: `eval_log_${localDay(new Date())}.csv` });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------- Theme ----------
+
+function currentTheme() {
+  const set = document.documentElement.getAttribute("data-theme");
+  if (set) return set;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function updateThemeButton() {
+  $("#theme").textContent = currentTheme() === "dark" ? "Light mode" : "Dark mode";
+}
+function initTheme() {
+  try {
+    const saved = localStorage.getItem("eval-log-viewer-theme");
+    if (saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+  } catch (e) { /* storage unavailable: follow the system setting */ }
+  updateThemeButton();
+  $("#theme").addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("eval-log-viewer-theme", next); } catch (e) { /* not saved */ }
+    updateThemeButton();
+  });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateThemeButton);
+}
+
+// ---------- Wiring ----------
+
+function bindFilter(id, key, event) {
+  $(id).addEventListener(event, (e) => {
+    state.filters[key] = e.target.value;
+    state.runLimit = 50;
+    render();
+  });
+}
+bindFilter("#f-text", "text", "input");
+bindFilter("#f-type", "type", "change");
+bindFilter("#f-status", "status", "change");
+bindFilter("#f-from", "from", "change");
+bindFilter("#f-to", "to", "change");
+
+$("#f-clear").addEventListener("click", () => {
+  state.filters = { text: "", type: "all", status: "all", from: "", to: "" };
+  state.excludedModels.clear();
+  $("#f-text").value = "";
+  $("#f-type").value = "all";
+  $("#f-status").value = "all";
+  $("#f-from").value = "";
+  $("#f-to").value = "";
+  renderModelFilter();
+  render();
+});
+
+$("#run-sort").addEventListener("change", (e) => {
+  state.runSort = e.target.value;
+  renderRuns(filteredRows());
+});
+
+$("#reload").addEventListener("click", loadFromServer);
+$("#open").addEventListener("click", () => $("#file-input").click());
+$("#file-input").addEventListener("change", (e) => {
+  if (e.target.files[0]) loadFromFile(e.target.files[0]);
+  e.target.value = "";
+});
+$("#export").addEventListener("click", exportCsv);
+
+let dragDepth = 0;
+window.addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("#drop").classList.add("show"); });
+window.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("#drop").classList.remove("show"); } });
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $("#drop").classList.remove("show");
+  const file = e.dataTransfer.files[0];
+  if (file) loadFromFile(file);
+});
+
+// Redraw only on width changes: redrawing changes the height, which would otherwise retrigger the observer
+let resizeFrame = 0, chartsWidth = 0;
+new ResizeObserver((entries) => {
+  const width = Math.round(entries[0].contentRect.width);
+  if (width === chartsWidth) return;
+  chartsWidth = width;
+  cancelAnimationFrame(resizeFrame);
+  resizeFrame = requestAnimationFrame(drawCharts);
+}).observe($("#charts"));
+
+initTheme();
+loadFromServer();
+</script>
+</body>
+</html>

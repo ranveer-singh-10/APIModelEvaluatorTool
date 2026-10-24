@@ -27,7 +27,18 @@ The file has no `main`; experiments are the `tester*` / `structured_data_tester`
   - Defaults: `model="claude-haiku-5-5"`, `stream=True`, `max_tokens=4000`.
   - Returns concatenated text blocks, or the full `Message` when `return_full_response=True` (needed for tool use and web search). With `return_usage=True` it returns `(result, usage_summary)` instead.
 - Cost estimation: `MODEL_PRICING` (USD per million tokens, hand-maintained, plus `LONG_CONTEXT_PRICING` for Haiku 5.5 above 100K prompt tokens) feeds `estimate_cost(model, usage)`. It charges cache writes at 1.25× input (5-minute TTL) or 2× (1-hour TTL), and returns `None` for models not in the table. `usage_summary()` combines the token counts and cost. When adding a model, add its prices to `MODEL_PRICING`.
-- `evaluate(model, request)` makes one non-streaming call through `chat()` and prints the response, token counts and estimated cost.
+- `evaluate(model, request)` makes one non-streaming call through `chat()` and prints the response, token counts and estimated cost. `evaluate_all_models(prompt)` does the same for every model in `MODEL_PRICING` and prints a comparison table. With `log=True`, both append to `logs/eval_log.json` (a JSON array of runs) via `log_evaluation()`.
+- `view_logs()` starts a local server on 127.0.0.1 (port 8765, or the next free one) in a daemon thread and opens `web/log_viewer.html`, a self-contained page with no dependencies for filtering, charting and exporting the log. The server answers only `/` (the page) and `/log.json` (the log file) and returns 404 for everything else, so it never exposes the project folder or `.env`. Keep it that way if you change it. The page can also open a log file directly, without the server.
 - Conversation history is a plain list of dicts built with `add_user_message` / `add_assistant_message`. The `_multi` variants accept a full `Message` and copy its `content` blocks — use these in tool-use loops so `tool_use` blocks are preserved.
 - `build_tooluse_json` builds a `tool_result` payload but takes the ID from `content[0]`, which is wrong when Claude emits text before the tool call.
 - Known bug: in streaming mode `chat()` iterates the raw events first, which exhausts the stream, so the subsequent `text_stream` loop prints nothing (the final returned text is still correct).
+
+## Workflow for any feature or task
+1. **Explore**: read the relevant files first. Don't edit anything yet.
+2. **Plan**: write a short numbered plan (files to change, approach, tests).
+   Then STOP and wait for my approval.
+3. **Code**: only after I approve. For core logic (checker, can_place,
+   place_word, dynamic placement), give hints or review my code instead
+   of writing it, unless I explicitly ask.
+4. **Commit**: suggest a commit message and wait. Don't run git commit
+   yourself.

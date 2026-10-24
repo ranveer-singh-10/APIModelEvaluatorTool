@@ -6,13 +6,18 @@ from anthropic.types import Message
 import os
 import time
 import json
+import threading
+import webbrowser
 from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SPACER ="--------------------------"
 client = Anthropic()
 
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Next to this file, so the notebook and scripts share one log whatever their working directory
-LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "eval_log.json")
+LOG_FILE = os.path.join(PROJECT_DIR, "logs", "eval_log.json")
+LOG_VIEWER_PAGE = os.path.join(PROJECT_DIR, "web", "log_viewer.html")
 
 # USD per million tokens. Estimates only - check against https://claude.com/pricing
 MODEL_PRICING = {
@@ -351,6 +356,61 @@ def evaluate_all_models(prompt, models=None, system=None, response_width=60, log
         log_evaluation("evaluate_all_models", prompt, system, results, log_file=log_file)
 
     return results
+
+class _LogViewerHandler(BaseHTTPRequestHandler):
+    # Serves only the viewer page and the log - never the project folder, which holds .env
+    log_file = LOG_FILE
+
+    def do_GET(self):
+        path = self.path.split("?")[0]
+        if path in ("/", "/index.html"):
+            self._send_file(LOG_VIEWER_PAGE, "text/html; charset=utf-8")
+        elif path == "/log.json":
+            if os.path.exists(self.log_file):
+                self._send_file(self.log_file, "application/json; charset=utf-8")
+            else:
+                self._send_bytes(b"[]", "application/json; charset=utf-8")
+        else:
+            self.send_error(404)
+
+    def _send_file(self, file_path, content_type):
+        with open(file_path, "rb") as f:
+            self._send_bytes(f.read(), content_type)
+
+    def _send_bytes(self, body, content_type):
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format, *args):
+        pass
+
+_log_viewer_server = None
+
+def view_logs(log_file=LOG_FILE, port=8765, open_browser=True):
+    global _log_viewer_server
+    _LogViewerHandler.log_file = log_file
+
+    if _log_viewer_server is None:
+        for candidate in range(port, port + 10):
+            try:
+                _log_viewer_server = ThreadingHTTPServer(("127.0.0.1", candidate), _LogViewerHandler)
+                break
+            except OSError:
+                continue
+        else:
+            raise OSError(f"No free port between {port} and {port + 9}")
+        # Daemon thread so a notebook cell returns straight away and the server stops with the kernel
+        threading.Thread(target=_log_viewer_server.serve_forever, daemon=True).start()
+
+    url = f"http://127.0.0.1:{_log_viewer_server.server_address[1]}/"
+    print(f"Log viewer running at {url} (log: {log_file})")
+    if open_browser:
+        webbrowser.open(url)
+    return url
 
 def show_web_search_response(response):
     print(f"stop_reason: {response.stop_reason}")
