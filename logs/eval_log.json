@@ -1,0 +1,209 @@
+[
+  {
+    "timestamp": "2026-10-24T22:39:39.578962+00:00",
+    "type": "evaluate",
+    "prompt": "What is quantum computing? Answer in one sentence",
+    "system": null,
+    "total_cost": 3.4399999999999996e-05,
+    "results": [
+      {
+        "model": "claude-haiku-5-5",
+        "seconds": 1.1084410000003118,
+        "stop_reason": "end_turn",
+        "response": "Quantum computing is a computing paradigm that uses quantum-mechanical phenomena such as superposition and entanglement to process information in ways that can solve certain problems much faster than classical computers.",
+        "usage": {
+          "input_tokens": 24,
+          "output_tokens": 64,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 88,
+          "cost": {
+            "input_cost": 2.4000000000000003e-06,
+            "output_cost": 3.2e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 3.4399999999999996e-05
+          }
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-10-24T22:40:45.472854+00:00",
+    "type": "evaluate_all_models",
+    "prompt": "How hot in the Sun?",
+    "system": null,
+    "total_cost": 0.0453207,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "seconds": 3.215078399999584,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies a lot depending on which part you're asking about:\n\n- **Core:** about 15 million °C (27 million °F) — where nuclear fusion happens\n- **Surface (photosphere):** about 5,500 °C (9,900 °F)\n- **Sunspots:** cooler, around 3,500–4,000 °C\n- **Corona (outer atmosphere):** surprisingly, 1–3 million °C — much hotter than the surface, which is still an active area of research\n\nIf you meant something else, like how hot it feels sitting *in* the sun on Earth, let me know and I can help with that instead.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 202,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 219,
+          "cost": {
+            "input_cost": 0.00017,
+            "output_cost": 0.0101,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.01027
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "seconds": 4.271624900000461,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies a lot depending on which part you're talking about:\n\n- **Core:** about **15 million °C** (27 million °F). Nuclear fusion happens here, turning hydrogen into helium.\n- **Radiative and convective zones:** cooling outward from about 7 million °C to around 2 million °C.\n- **Surface (photosphere):** about **5,500 °C** (10,000 °F). This is the visible \"surface\" we see.\n- **Sunspots:** cooler patches, around 3,500–4,500 °C. They look dark only by contrast.\n- **Chromosphere:** rises from about 4,000 °C to around 20,000 °C.\n- **Corona (outer atmosphere):** a surprising **1–3 million °C**, far hotter than the surface. Why the corona is so hot is still an active area of research, with magnetic activity thought to be the main cause.\n\nSo the short answer is about 5,500 °C at the surface and about 15 million °C at the center.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 349,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 366,
+          "cost": {
+            "input_cost": 6.8e-05,
+            "output_cost": 0.00698,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0070480000000000004
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "seconds": 8.882526600000347,
+        "stop_reason": "end_turn",
+        "response": "**The Sun's temperature varies a lot depending on where you look:**\n\n| Region | Temperature |\n|---|---|\n| **Core** | ~15 million °C (27 million °F) — where hydrogen fuses into helium |\n| **Radiative zone** | ~7 million → 2 million °C |\n| **Convective zone** | ~2 million → 5,500 °C |\n| **Photosphere** (visible surface) | ~5,500 °C (9,900 °F) |\n| **Chromosphere** | ~4,000 → 20,000 °C |\n| **Corona** (outer atmosphere) | 1–3 million °C |\n\nA curious puzzle: the corona is *hundreds of times hotter* than the surface below it, even though it's farther from the energy source. This \"coronal heating problem\" is still not fully solved — magnetic reconnection and wave heating are the leading explanations.\n\nSunspots are the cool spots, around 3,500 °C, which is why they look dark against the brighter surrounding photosphere.\n\n---\n\n*If you actually meant \"how hot does it get standing in the sun?\" — on a hot day, direct sunlight can feel 6–8 °C (10–15 °F) warmer than the shaded air temperature, and surfaces like asphalt can reach 60–70 °C (140–160 °F).*",
+        "usage": {
+          "input_tokens": 15,
+          "output_tokens": 651,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 666,
+          "cost": {
+            "input_cost": 7.5e-05,
+            "output_cost": 0.016275,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.01635
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "seconds": 4.445051300000159,
+        "stop_reason": "end_turn",
+        "response": "The Sun's temperature varies a lot by region:\n\n| Region | Approximate temperature |\n|---|---|\n| **Core** | ~15 million °C (27 million °F) |\n| **Radiative zone** | ~7 million °C down to ~2 million °C |\n| **Convective zone** | ~2 million °C down to ~5,700 °C |\n| **Surface (photosphere)** | ~5,500 °C (~10,000 °F) |\n| **Chromosphere** | ~4,000 to 25,000 °C |\n| **Corona** (outer atmosphere) | 1 to 3 million °C |\n\n**Notable points:**\n- **Core:** Nuclear fusion happens here, turning hydrogen into helium and releasing the Sun's energy.\n- **Surface:** This is the temperature of the light we actually see.\n- **Corona puzzle:** The corona is hundreds of times hotter than the surface beneath it, which seems backward. Scientists are still working out why, and magnetic wave heating and tiny flares (\"nanoflares\") are leading explanations. NASA's Parker Solar Probe is flying through the corona to help answer this.\n- **Sunspots:** These cooler patches on the surface are about 3,500–4,500 °C. They look dark only by contrast.\n\nIf you meant something else, like how hot it feels standing in sunlight on Earth, I can go into that too.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 456,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 473,
+          "cost": {
+            "input_cost": 3.4e-05,
+            "output_cost": 0.00456,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.004594
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "seconds": 3.8784907999997813,
+        "stop_reason": "end_turn",
+        "response": "# The Sun's Temperature\n\nThe Sun has different temperatures depending on which layer you're measuring:\n\n| Layer | Temperature |\n|-------|-------------|\n| **Core** | ~15 million °C (27 million °F) |\n| **Surface (photosphere)** | ~5,500°C (9,900°F) |\n| **Corona (outer atmosphere)** | 1-3 million °C (surprisingly hotter than the surface!) |\n\n## Key Points:\n\n- **The core** is where nuclear fusion happens, converting hydrogen into helium and releasing enormous energy—this is the hottest part.\n\n- **The surface** (what we actually see) is much cooler by comparison, though still hot enough to vaporize any known material instantly.\n\n- **The corona mystery**: Scientists are still researching why the Sun's outer atmosphere is hundreds of times hotter than its surface—this is called the \"coronal heating problem\" and remains an active area of solar physics research.\n\nWould you like more detail on any particular layer or how scientists measure these temperatures?",
+        "usage": {
+          "input_tokens": 15,
+          "output_tokens": 342,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 357,
+          "cost": {
+            "input_cost": 3e-05,
+            "output_cost": 0.00342,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00345
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "seconds": 4.640774899999997,
+        "stop_reason": "end_turn",
+        "response": "## The Sun's Temperature\n\nThe temperature varies greatly depending on the location:\n\n| Layer | Temperature |\n|-------|-------------|\n| **Core** | ~15 million °C (27 million °F) |\n| **Radiative Zone** | 7-15 million °C |\n| **Surface (Photosphere)** | ~5,500°C (10,000°F) |\n| **Atmosphere (Corona)** | 1-3 **million** °C |\n\n### Interesting Note\nThe **corona** (outer atmosphere) is surprisingly **much hotter** than the surface, which is still not fully explained by scientists. This is known as the **coronal heating problem**.\n\nThe **core** is where nuclear fusion occurs, which is why it reaches the highest temperatures.",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 179,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 192,
+          "cost": {
+            "input_cost": 3.9e-05,
+            "output_cost": 0.002685,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.002724
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "seconds": 2.8659602999996423,
+        "stop_reason": "end_turn",
+        "response": "It depends on what you mean:\n\n- **How hot the Sun itself is:** The surface (photosphere) is about **5,500°C (about 10,000°F)**. The core reaches about **15 million°C (27 million°F)**.\n- **How hot it feels to you in direct sunlight:** On a sunny day, you can feel 10-15°F (about 6-8°C) hotter than in the shade. Sunlit surfaces get much hotter than the air. Dark asphalt can reach 120-150°F (50-65°C), and dark sand or metal can be hotter still.\n\nIf you meant something else, like how hot it gets outdoors in the sun on a particular day, tell me where you are and I can say more.",
+        "usage": {
+          "input_tokens": 17,
+          "output_tokens": 490,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 507,
+          "cost": {
+            "input_cost": 1.7000000000000002e-06,
+            "output_cost": 0.000245,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0002467
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "seconds": 1.7279945999998745,
+        "stop_reason": "end_turn",
+        "response": "# The Sun's Temperature\n\nThe Sun's temperature varies by location:\n\n- **Surface (Photosphere)**: About **5,500°C** (9,932°F)\n- **Core**: About **15 million°C** (27 million°F)\n\nThe core is where nuclear fusion occurs, converting hydrogen into helium and releasing enormous amounts of energy. Interestingly, the Sun's outer atmosphere (corona) is much hotter than its surface—around 1-3 million°C—which is still an unsolved mystery in solar physics!",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 125,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 138,
+          "cost": {
+            "input_cost": 1.3e-05,
+            "output_cost": 0.000625,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000638
+          }
+        },
+        "error": null
+      }
+    ]
+  }
+]
