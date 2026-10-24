@@ -5,9 +5,14 @@ from anthropic import Anthropic
 from anthropic.types import Message
 import os
 import time
+import json
+from datetime import datetime, timezone
 
 SPACER ="--------------------------"
 client = Anthropic()
+
+# Next to this file, so the notebook and scripts share one log whatever their working directory
+LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "eval_log.json")
 
 # USD per million tokens. Estimates only - check against https://claude.com/pricing
 MODEL_PRICING = {
@@ -203,14 +208,47 @@ def chat(messages,model="claude-haiku-5-5", system=None,temperature=1.0, stream=
         return result, usage_summary(model, final.usage)
     return result
 
-def evaluate(model, request, system=None):
+def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE):
+    # The log file is one JSON array of runs, newest last, so a webpage can load it with a single JSON.parse
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "type": kind,
+        "prompt": prompt,
+        "system": system,
+        "total_cost": sum(
+            r["usage"]["cost"]["total_cost"] for r in results if r["usage"] and r["usage"]["cost"]
+        ),
+        "results": results,
+    }
+
+    entries = []
+    if os.path.exists(log_file):
+        with open(log_file, encoding="utf-8") as f:
+            content = f.read().strip()
+        if content:
+            entries = json.loads(content)
+            if not isinstance(entries, list):
+                raise ValueError(f"{log_file} is not a JSON list of log entries")
+
+    entries.append(entry)
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    with open(log_file, "w", encoding="utf-8") as f:
+        # default=str covers SDK content blocks when a prompt is passed as a messages list
+        json.dump(entries, f, indent=2, ensure_ascii=False, default=str)
+
+    print(f"Logged to {log_file}")
+    return entry
+
+def evaluate(model, request, system=None, log=False, log_file=LOG_FILE):
     if isinstance(request, str):
         messages = []
         add_user_message(messages, request)
     else:
         messages = request
 
+    start = time.perf_counter()
     response, usage = chat(messages, model=model, system=system, stream=False, return_full_response=True, return_usage=True)
+    seconds = time.perf_counter() - start
 
     print(f"MODEL: {model}")
     print(SPACER)
@@ -231,9 +269,19 @@ def evaluate(model, request, system=None):
         print(f"Estimated total:    ${cost['total_cost']:.6f}")
     print(SPACER)
 
-    return {"model": model, "response": response, "usage": usage}
+    if log:
+        log_evaluation("evaluate", request, system, [{
+            "model": model,
+            "seconds": seconds,
+            "stop_reason": response.stop_reason,
+            "response": text_from_message(response),
+            "usage": usage,
+            "error": None,
+        }], log_file=log_file)
 
-def evaluate_all_models(prompt, models=None, system=None, response_width=60):
+    return {"model": model, "response": response, "usage": usage, "seconds": seconds}
+
+def evaluate_all_models(prompt, models=None, system=None, response_width=60, log=False, log_file=LOG_FILE):
     models = models or list(MODEL_PRICING)
     results = []
 
@@ -247,6 +295,7 @@ def evaluate_all_models(prompt, models=None, system=None, response_width=60):
             results.append({
                 "model": model,
                 "seconds": time.perf_counter() - start,
+                "stop_reason": response.stop_reason,
                 "response": text_from_message(response),
                 "usage": usage,
                 "error": None,
@@ -256,6 +305,7 @@ def evaluate_all_models(prompt, models=None, system=None, response_width=60):
             results.append({
                 "model": model,
                 "seconds": time.perf_counter() - start,
+                "stop_reason": None,
                 "response": "",
                 "usage": None,
                 "error": f"{type(e).__name__}: {e}",
@@ -295,6 +345,10 @@ def evaluate_all_models(prompt, models=None, system=None, response_width=60):
     for row in rows:
         print(format_row(row))
     print()
+
+    if log:
+        # Logs every table row in full: responses and errors are not truncated
+        log_evaluation("evaluate_all_models", prompt, system, results, log_file=log_file)
 
     return results
 
