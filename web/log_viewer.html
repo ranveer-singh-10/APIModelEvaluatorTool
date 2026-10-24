@@ -116,8 +116,8 @@ th button { border: none; background: none; padding: 0; cursor: pointer; font-we
 tbody tr:last-child td { border-bottom: none; }
 .err-count { color: var(--critical); }
 
-.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
-.chart { margin: 0; min-width: 0; }
+.charts { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 16px; }
+.chart { margin: 0; min-width: 0; overflow-x: auto; }
 .chart figcaption { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
 .chart svg { display: block; overflow: visible; }
 .chart .bar { fill: var(--series-1); }
@@ -605,15 +605,27 @@ function drawCharts() {
   }
 }
 
-function barChart(width, { title, fmt, items }) {
+const MAX_PLOT_WIDTH = 900;
+const measureCtx = document.createElement("canvas").getContext("2d");
+
+// Width of chart text in px, using the same 12px font as the SVG labels
+function textWidth(text) {
+  measureCtx.font = `12px ${getComputedStyle(document.body).fontFamily}`;
+  return measureCtx.measureText(text).width;
+}
+
+function barChart(availableWidth, { title, fmt, items }) {
   const band = 30, barH = 18, axisH = 22;
-  const labelW = Math.min(140, Math.max(90, width * 0.36));
-  const valueW = 78;
-  const plotX = labelW;
-  const plotW = Math.max(40, width - labelW - valueW);
-  const height = items.length * band + axisH;
+  const labelW = Math.min(140, Math.max(90, availableWidth * 0.36));
   const values = items.map((i) => i.value).filter((v) => v != null);
   const max = values.length ? Math.max(...values) : 0;
+  // Room after the longest bar for its value label, sized to the widest label so it never spills past the chart
+  const valueW = Math.ceil(Math.max(0, ...values.map((v) => textWidth(fmt(v))))) + 16;
+  const plotX = labelW;
+  // Capped so bars stay easy to read against their labels on wide screens
+  const plotW = Math.min(MAX_PLOT_WIDTH, Math.max(40, availableWidth - labelW - valueW));
+  const width = labelW + plotW + valueW;
+  const height = items.length * band + axisH;
   const scale = (v) => (max > 0 ? (v / max) * plotW : 0);
 
   const svg = s("svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${title} by model` });
