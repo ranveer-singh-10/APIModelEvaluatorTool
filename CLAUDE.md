@@ -8,7 +8,8 @@ A Python sandbox for experimenting with the Anthropic Messages API (`AnthropicAP
 
 ## Environment
 
-- Python 3.13, virtualenv in `.venv/` (PyCharm-managed). No `requirements.txt`; dependencies are `anthropic`, `openai` and `python-dotenv`.
+- Python 3.13, virtualenv in `.venv/` (PyCharm-managed). No `requirements.txt`; dependencies are `anthropic`, `openai` and `python-dotenv`, plus `nbstripout` for the notebook.
+- `.gitattributes` runs notebooks through the `nbstripout` git filter, so outputs and execution metadata are stripped when a notebook is committed (the working copy keeps them). The filter itself lives in `.git/config`, so a fresh clone needs `.venv/Scripts/nbstripout --install --attributes .gitattributes` once; until then, git silently commits notebooks with their outputs. Once installed, the filter is required, so a notebook commit fails if `.venv` is missing.
 - `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are loaded from `.env` via `load_dotenv()` at import time. `.claude/settings.json` denies reading `.env` — don't try to open it.
 - There are no tests, linter config, or build step.
 
@@ -20,7 +21,7 @@ A Python sandbox for experimenting with the Anthropic Messages API (`AnthropicAP
 .venv/Scripts/python evaluation.py
 ```
 
-None of the files has a `main`; experiments are the `tester*` / `structured_data_tester` / `evaluate*` calls, invoked by uncommenting a call at the bottom of the file. `notebook/eval_testing.ipynb` does `from evaluation import *`. Every run makes real (billed) API calls.
+None of the files has a `main`; experiments are the `tester*` / `structured_data_tester` / `evaluate*` calls, invoked by uncommenting a call at the bottom of the file. `notebook/eval_testing.ipynb` does `from evaluation import *`; its `evaluate*` cells are commented out the same way, so Run All makes no API calls. Every run makes real (billed) API calls.
 
 ## Architecture
 
