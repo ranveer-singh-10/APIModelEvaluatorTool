@@ -4,20 +4,9 @@ load_dotenv()
 from anthropic import Anthropic
 from anthropic.types import Message
 import os
-import time
-import json
-import threading
-import webbrowser
-from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SPACER ="--------------------------"
 client = Anthropic()
-
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-# Next to this file, so the notebook and scripts share one log whatever their working directory
-LOG_FILE = os.path.join(PROJECT_DIR, "logs", "eval_log.json")
-LOG_VIEWER_PAGE = os.path.join(PROJECT_DIR, "web", "log_viewer.html")
 
 # USD per million tokens. Estimates only - check against https://claude.com/pricing
 MODEL_PRICING = {
@@ -116,6 +105,13 @@ def text_from_message(message):
         [block.text for block in message.content if block.type == "text"]
     )
 
+# text_from_response and stop_reason match OpenAIAPI's, so evaluation.py can treat both providers alike
+def text_from_response(response):
+    return text_from_message(response)
+
+def stop_reason(response):
+    return response.stop_reason
+
 def estimate_cost(model, usage):
     pricing = MODEL_PRICING.get(model)
     if pricing is None:
@@ -212,205 +208,6 @@ def chat(messages,model="claude-haiku-5-5", system=None,temperature=1.0, stream=
     if return_usage:
         return result, usage_summary(model, final.usage)
     return result
-
-def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE):
-    # The log file is one JSON array of runs, newest last, so a webpage can load it with a single JSON.parse
-    entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "type": kind,
-        "prompt": prompt,
-        "system": system,
-        "total_cost": sum(
-            r["usage"]["cost"]["total_cost"] for r in results if r["usage"] and r["usage"]["cost"]
-        ),
-        "results": results,
-    }
-
-    entries = []
-    if os.path.exists(log_file):
-        with open(log_file, encoding="utf-8") as f:
-            content = f.read().strip()
-        if content:
-            entries = json.loads(content)
-            if not isinstance(entries, list):
-                raise ValueError(f"{log_file} is not a JSON list of log entries")
-
-    entries.append(entry)
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    with open(log_file, "w", encoding="utf-8") as f:
-        # default=str covers SDK content blocks when a prompt is passed as a messages list
-        json.dump(entries, f, indent=2, ensure_ascii=False, default=str)
-
-    print(f"Logged to {log_file}")
-    return entry
-
-def evaluate(model, request, system=None, log=False, log_file=LOG_FILE):
-    if isinstance(request, str):
-        messages = []
-        add_user_message(messages, request)
-    else:
-        messages = request
-
-    start = time.perf_counter()
-    response, usage = chat(messages, model=model, system=system, stream=False, return_full_response=True, return_usage=True)
-    seconds = time.perf_counter() - start
-
-    print(f"MODEL: {model}")
-    print(SPACER)
-    print(text_from_message(response))
-    print(SPACER)
-    print(f"stop_reason: {response.stop_reason}")
-    print(f"Input tokens:       {usage['input_tokens']}")
-    print(f"Output tokens:      {usage['output_tokens']}")
-    print(f"Cache read tokens:  {usage['cache_read_input_tokens']}")
-    print(f"Cache write tokens: {usage['cache_creation_input_tokens']}")
-    print(f"Total tokens:       {usage['total_tokens']}")
-
-    cost = usage["cost"]
-    if cost:
-        print(f"Input cost:         ${cost['input_cost']:.6f}")
-        print(f"Output cost:        ${cost['output_cost']:.6f}")
-        print(f"Cache cost:         ${cost['cache_write_cost'] + cost['cache_read_cost']:.6f}")
-        print(f"Estimated total:    ${cost['total_cost']:.6f}")
-    print(SPACER)
-
-    if log:
-        log_evaluation("evaluate", request, system, [{
-            "model": model,
-            "seconds": seconds,
-            "stop_reason": response.stop_reason,
-            "response": text_from_message(response),
-            "usage": usage,
-            "error": None,
-        }], log_file=log_file)
-
-    return {"model": model, "response": response, "usage": usage, "seconds": seconds}
-
-def evaluate_all_models(prompt, models=None, system=None, response_width=60, log=False, log_file=LOG_FILE):
-    models = models or list(MODEL_PRICING)
-    results = []
-
-    for model in models:
-        messages = []
-        add_user_message(messages, prompt)
-        print(f"Running {model}...")
-        start = time.perf_counter()
-        try:
-            response, usage = chat(messages, model=model, system=system, stream=False, return_full_response=True, return_usage=True)
-            results.append({
-                "model": model,
-                "seconds": time.perf_counter() - start,
-                "stop_reason": response.stop_reason,
-                "response": text_from_message(response),
-                "usage": usage,
-                "error": None,
-            })
-        except Exception as e:
-            # Keep going so one unavailable model doesn't stop the comparison
-            results.append({
-                "model": model,
-                "seconds": time.perf_counter() - start,
-                "stop_reason": None,
-                "response": "",
-                "usage": None,
-                "error": f"{type(e).__name__}: {e}",
-            })
-
-    headers = ["Model", "Time (s)", "Input", "Output", "Total", "Cost ($)", "Response"]
-    rows = []
-    for r in results:
-        usage = r["usage"]
-        if usage:
-            cost = usage["cost"]["total_cost"] if usage["cost"] else None
-            text = " ".join(r["response"].split())
-            rows.append([
-                r["model"],
-                f"{r['seconds']:.2f}",
-                str(usage["input_tokens"]),
-                str(usage["output_tokens"]),
-                str(usage["total_tokens"]),
-                f"{cost:.6f}" if cost is not None else "n/a",
-                text if len(text) <= response_width else text[:response_width - 3] + "...",
-            ])
-        else:
-            error = r["error"]
-            rows.append([r["model"], f"{r['seconds']:.2f}", "-", "-", "-", "-",
-                         "ERROR: " + (error if len(error) <= response_width else error[:response_width - 3] + "...")])
-
-    widths = [max(len(row[i]) for row in [headers] + rows) for i in range(len(headers))]
-    numeric = {1, 2, 3, 4, 5}
-
-    def format_row(row):
-        return " | ".join(cell.rjust(widths[i]) if i in numeric else cell.ljust(widths[i]) for i, cell in enumerate(row))
-
-    print()
-    print(f"PROMPT: {prompt}")
-    print(format_row(headers))
-    print("-+-".join("-" * w for w in widths))
-    for row in rows:
-        print(format_row(row))
-    print()
-
-    if log:
-        # Logs every table row in full: responses and errors are not truncated
-        log_evaluation("evaluate_all_models", prompt, system, results, log_file=log_file)
-
-    return results
-
-class _LogViewerHandler(BaseHTTPRequestHandler):
-    # Serves only the viewer page and the log - never the project folder, which holds .env
-    log_file = LOG_FILE
-
-    def do_GET(self):
-        path = self.path.split("?")[0]
-        if path in ("/", "/index.html"):
-            self._send_file(LOG_VIEWER_PAGE, "text/html; charset=utf-8")
-        elif path == "/log.json":
-            if os.path.exists(self.log_file):
-                self._send_file(self.log_file, "application/json; charset=utf-8")
-            else:
-                self._send_bytes(b"[]", "application/json; charset=utf-8")
-        else:
-            self.send_error(404)
-
-    def _send_file(self, file_path, content_type):
-        with open(file_path, "rb") as f:
-            self._send_bytes(f.read(), content_type)
-
-    def _send_bytes(self, body, content_type):
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, format, *args):
-        pass
-
-_log_viewer_server = None
-
-def view_logs(log_file=LOG_FILE, port=8765, open_browser=True):
-    global _log_viewer_server
-    _LogViewerHandler.log_file = log_file
-
-    if _log_viewer_server is None:
-        for candidate in range(port, port + 10):
-            try:
-                _log_viewer_server = ThreadingHTTPServer(("127.0.0.1", candidate), _LogViewerHandler)
-                break
-            except OSError:
-                continue
-        else:
-            raise OSError(f"No free port between {port} and {port + 9}")
-        # Daemon thread so a notebook cell returns straight away and the server stops with the kernel
-        threading.Thread(target=_log_viewer_server.serve_forever, daemon=True).start()
-
-    url = f"http://127.0.0.1:{_log_viewer_server.server_address[1]}/"
-    print(f"Log viewer running at {url} (log: {log_file})")
-    if open_browser:
-        webbrowser.open(url)
-    return url
 
 def show_web_search_response(response):
     print(f"stop_reason: {response.stop_reason}")
@@ -573,5 +370,3 @@ def structured_data_tester():
 #tester_with_temp()
 #tester_with_stream()
 #structured_data_tester()
-#evaluate("claude-haiku-5-5", "What is quantum computing? Answer in one sentence")
-#evaluate_all_models("What is quantum computing? Answer in one sentence")
