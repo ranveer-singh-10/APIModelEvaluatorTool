@@ -110,7 +110,8 @@ button, input, select { font: inherit; color: inherit; }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
-th:first-child, td:first-child { text-align: left; }
+/* Model and Provider are text; the other columns are numbers */
+th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; }
 th { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 th button { border: none; background: none; padding: 0; cursor: pointer; font-weight: 600; color: inherit; }
 tbody tr:last-child td { border-bottom: none; }
@@ -212,6 +213,13 @@ tbody tr:last-child td { border-bottom: none; }
           <option value="all">All</option>
           <option value="evaluate">Single model (evaluate)</option>
           <option value="evaluate_all_models">All models (evaluate_all_models)</option>
+        </select>
+      </label>
+      <label class="field">Provider
+        <select id="f-provider">
+          <option value="all">All</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="openai">OpenAI</option>
         </select>
       </label>
       <label class="field">Status
@@ -318,7 +326,7 @@ const state = {
   modelOrder: [],
   source: "",
   excludedModels: new Set(),
-  filters: { text: "", type: "all", status: "all", from: "", to: "" },
+  filters: { text: "", type: "all", provider: "all", status: "all", from: "", to: "" },
   modelSort: { key: null, dir: 1 },
   runSort: "newest",
   expanded: new Set(),
@@ -345,6 +353,16 @@ function promptText(p) {
   }
   return JSON.stringify(p, null, 2);
 }
+
+// Entries logged before results recorded a provider get one from the model name, matching evaluation.provider_for
+function inferProvider(model) {
+  if (model.startsWith("claude-")) return "anthropic";
+  if (/^(gpt-|o1|o3|o4)/.test(model)) return "openai";
+  return "unknown";
+}
+
+// Stop reasons that mean the model finished normally, so no badge is shown
+const NORMAL_STOPS = new Set(["end_turn", "completed"]);
 
 function parseLog(text) {
   if (!text.trim()) return [];
@@ -380,6 +398,7 @@ function loadEntries(data, source) {
         prompt: promptText(e.prompt),
         system: e.system ? String(e.system) : "",
         model,
+        provider: r.provider || inferProvider(model),
         seconds: num(r.seconds),
         stopReason: r.stop_reason || "",
         response: r.response || "",
@@ -444,6 +463,7 @@ function filteredRows() {
   return state.rows.filter((r) => {
     if (state.excludedModels.has(r.model)) return false;
     if (f.type !== "all" && r.type !== f.type) return false;
+    if (f.provider !== "all" && r.provider !== f.provider) return false;
     if (f.status === "ok" && r.error) return false;
     if (f.status === "error" && !r.error) return false;
     if (f.from || f.to) {
@@ -452,7 +472,7 @@ function filteredRows() {
       if (f.from && d < f.from) return false;
       if (f.to && d > f.to) return false;
     }
-    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model].some((t) => t.toLowerCase().includes(q))) return false;
+    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider].some((t) => t.toLowerCase().includes(q))) return false;
     return true;
   });
 }
@@ -489,7 +509,7 @@ function aggregate(rows) {
   for (const r of rows) {
     let a = byModel.get(r.model);
     if (!a) {
-      a = { model: r.model, calls: 0, errors: 0, costSum: 0, costN: 0, secSum: 0, secN: 0, outSum: 0, outN: 0 };
+      a = { model: r.model, provider: r.provider, calls: 0, errors: 0, costSum: 0, costN: 0, secSum: 0, secN: 0, outSum: 0, outN: 0 };
       byModel.set(r.model, a);
     }
     a.calls++;
@@ -539,6 +559,7 @@ function renderTiles(rows, runCount) {
 
 const MODEL_COLUMNS = [
   { key: "model", label: "Model", fmt: (v) => v },
+  { key: "provider", label: "Provider", fmt: (v) => v },
   { key: "calls", label: "Calls", fmt: (v) => v.toLocaleString() },
   { key: "errors", label: "Errors", fmt: (v) => v.toLocaleString() },
   { key: "totalCost", label: "Total cost", fmt: fmtCost },
@@ -562,7 +583,7 @@ function renderModelTable(agg) {
       h("button", {
         type: "button",
         onclick: () => {
-          state.modelSort = active ? { key: col.key, dir: -state.modelSort.dir } : { key: col.key, dir: col.key === "model" ? 1 : -1 };
+          state.modelSort = active ? { key: col.key, dir: -state.modelSort.dir } : { key: col.key, dir: typeof agg[0][col.key] === "string" ? 1 : -1 };
           renderModelTable(agg);
         },
       }, col.label + arrow));
@@ -776,6 +797,8 @@ function resultView(r, single) {
     metric("Output", fmtInt(num(u.output_tokens))),
     metric("Cost", fmtCost(r.totalCost)),
   ];
+  // Already counted in Output; shown so OpenAI output totals can be read against Claude's
+  if (num(u.reasoning_tokens)) metrics.push(metric("Reasoning", fmtInt(u.reasoning_tokens)));
   if (num(u.cache_read_input_tokens)) metrics.push(metric("Cache read", fmtInt(u.cache_read_input_tokens)));
   if (num(u.cache_creation_input_tokens)) metrics.push(metric("Cache write", fmtInt(u.cache_creation_input_tokens)));
   if (single && r.cost) {
@@ -788,7 +811,7 @@ function resultView(r, single) {
   return h("article", { class: "result" },
     h("div", { class: "result-head" },
       h("strong", {}, r.model),
-      r.stopReason && r.stopReason !== "end_turn" ? h("span", { class: "badge" }, r.stopReason) : null),
+      r.stopReason && !NORMAL_STOPS.has(r.stopReason) ? h("span", { class: "badge" }, r.stopReason) : null),
     r.error ? null : h("dl", { class: "metrics" }, metrics),
     r.error
       ? h("div", { class: "error-box", role: "note" }, h("strong", {}, "⚠ Error: "), r.error)
@@ -803,10 +826,12 @@ const CSV_COLUMNS = [
   ["prompt", (r) => r.prompt],
   ["system", (r) => r.system],
   ["model", (r) => r.model],
+  ["provider", (r) => r.provider],
   ["seconds", (r) => r.seconds],
   ["stop_reason", (r) => r.stopReason],
   ["input_tokens", (r) => r.usage && r.usage.input_tokens],
   ["output_tokens", (r) => r.usage && r.usage.output_tokens],
+  ["reasoning_tokens", (r) => r.usage && r.usage.reasoning_tokens],
   ["cache_read_input_tokens", (r) => r.usage && r.usage.cache_read_input_tokens],
   ["cache_creation_input_tokens", (r) => r.usage && r.usage.cache_creation_input_tokens],
   ["total_tokens", (r) => r.usage && r.usage.total_tokens],
@@ -880,15 +905,17 @@ function bindFilter(id, key, event) {
 }
 bindFilter("#f-text", "text", "input");
 bindFilter("#f-type", "type", "change");
+bindFilter("#f-provider", "provider", "change");
 bindFilter("#f-status", "status", "change");
 bindFilter("#f-from", "from", "change");
 bindFilter("#f-to", "to", "change");
 
 $("#f-clear").addEventListener("click", () => {
-  state.filters = { text: "", type: "all", status: "all", from: "", to: "" };
+  state.filters = { text: "", type: "all", provider: "all", status: "all", from: "", to: "" };
   state.excludedModels.clear();
   $("#f-text").value = "";
   $("#f-type").value = "all";
+  $("#f-provider").value = "all";
   $("#f-status").value = "all";
   $("#f-from").value = "";
   $("#f-to").value = "";
