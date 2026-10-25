@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Chat</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f4f2;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e2e1dc;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7a7974;
+  --accent: #2a78d6;
+  --accent-ink: #1d5fae;
+  --accent-bg: #e8eefa;
+  --critical: #b42318;
+  --critical-bg: #fdecea;
+  --success: #1f7a3d;
+  --warning: #9a6200;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --border: #2f2f2c;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --accent: #3987e5;
+    --accent-ink: #8ab8f0;
+    --accent-bg: #1f2b3d;
+    --critical: #f07167;
+    --critical-bg: #3a1d1b;
+    --success: #5cc27f;
+    --warning: #e0a640;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --border: #2f2f2c;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8f8e86;
+  --accent: #3987e5;
+  --accent-ink: #8ab8f0;
+  --accent-bg: #1f2b3d;
+  --critical: #f07167;
+  --critical-bg: #3a1d1b;
+  --success: #5cc27f;
+  --warning: #e0a640;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.page { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 13px; margin: 0; color: var(--text-secondary); font-weight: 600; }
+button, input, textarea { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 16px; }
+.topbar a { color: var(--accent-ink); text-decoration: none; font-size: 13px; }
+.topbar a:hover { text-decoration: underline; }
+
+.btn {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer;
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 8px 18px; font-weight: 600; }
+.btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-link { border: none; background: none; color: var(--accent-ink); padding: 2px 4px; cursor: pointer; font-size: 12px; }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+
+.models-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 10px; }
+.models-count { font-size: 12px; color: var(--text-secondary); }
+.provider { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 0; }
+.provider + .provider { border-top: 1px solid var(--border); }
+.provider-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); min-width: 76px; text-transform: capitalize; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: pointer; font-size: 13px; background: var(--bg); }
+.chip input { margin: 0; accent-color: var(--accent); }
+
+.composer textarea {
+  width: 100%; min-height: 110px; resize: vertical; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); padding: 10px 12px; color: var(--text-primary);
+}
+.composer details { margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
+.composer summary { cursor: pointer; width: fit-content; }
+.composer details textarea { min-height: 60px; margin-top: 6px; }
+.composer-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.composer-actions label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.composer-actions input { accent-color: var(--accent); margin: 0; }
+.hint { font-size: 12px; color: var(--text-muted); }
+
+.notice { border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid var(--border); background: var(--surface); }
+.notice.error { border-color: var(--critical); background: var(--critical-bg); }
+.notice code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+.summary { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.summary strong { color: var(--text-primary); }
+.summary .prompt { display: block; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+.tab {
+  flex: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; border-bottom: none;
+  border-radius: 8px 8px 0 0; background: none; padding: 8px 12px; cursor: pointer; color: var(--text-secondary);
+  margin-bottom: -1px;
+}
+.tab:hover { background: var(--surface-2); }
+.tab[aria-selected="true"] { background: var(--surface); border-color: var(--border); color: var(--text-primary); font-weight: 600; }
+.tab .cost { font-size: 12px; color: var(--text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.status { width: 14px; height: 14px; flex: none; display: inline-grid; place-items: center; font-size: 12px; line-height: 1; }
+.status.ok { color: var(--success); }
+.status.err { color: var(--critical); }
+.status.warn { color: var(--warning); }
+.status.wait { border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .status.wait { animation-duration: 3s; } }
+
+.tabpanel { background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px; padding: 16px; }
+.tabpanel[hidden] { display: none; }
+.response { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: inherit; line-height: 1.6; }
+.response.error { color: var(--critical); background: var(--critical-bg); padding: 10px 12px; border-radius: 8px; }
+.waiting { color: var(--text-muted); }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.meta-label { font-size: 12px; color: var(--text-secondary); }
+.meta-value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.meta-value.warn { color: var(--warning); }
+.panel-tools { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <h1>Model Chat</h1>
+    <a href="/">Open log viewer →</a>
+  </div>
+
+  <div id="notice" class="notice error" hidden></div>
+
+  <section class="panel" aria-labelledby="models-title">
+    <div class="models-head">
+      <h2 id="models-title">Models</h2>
+      <div>
+        <span id="models-count" class="models-count"></span>
+        <button type="button" class="btn-link" data-select="all">Select all</button>
+        <button type="button" class="btn-link" data-select="none">Clear</button>
+      </div>
+    </div>
+    <div id="models"><span class="hint">Loading models…</span></div>
+  </section>
+
+  <form id="composer" class="panel composer">
+    <label for="prompt" class="hint">Prompt</label>
+    <textarea id="prompt" placeholder="Ask every checked model the same question…" required></textarea>
+    <details>
+      <summary>System prompt (optional)</summary>
+      <textarea id="system" placeholder="e.g. Answer in one sentence."></textarea>
+    </details>
+    <div class="composer-actions">
+      <label><input type="checkbox" id="log" checked> Log this run to <code>logs/eval_log.json</code></label>
+      <span>
+        <span class="hint">Ctrl+Enter to send · every model checked is a billed call</span>
+        <button type="submit" id="send" class="btn btn-primary">Send</button>
+      </span>
+    </div>
+  </form>
+
+  <section id="results" hidden>
+    <div id="summary" class="summary" aria-live="polite"></div>
+    <div id="tabs" class="tabs" role="tablist" aria-label="Responses by model"></div>
+    <div id="panels"></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+const NORMAL_STOPS = new Set(["end_turn", "completed"]);
+const $ = (id) => document.getElementById(id);
+
+let allModels = [];
+let running = false;
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else node.setAttribute(k, v);
+  }
+  node.append(...children);
+  return node;
+}
+
+function fmtCost(v) { return v == null ? "n/a" : "$" + v.toFixed(6); }
+function fmtInt(v) { return v == null ? "–" : Number(v).toLocaleString(); }
+
+function showNotice(html) {
+  const n = $("notice");
+  n.innerHTML = html;
+  n.hidden = !html;
+}
+
+// ---- Model picker ----
+
+function checkedModels() {
+  return [...document.querySelectorAll("#models input[data-model]:checked")].map((i) => i.dataset.model);
+}
+
+function updateCount() {
+  $("models-count").textContent = `${checkedModels().length} of ${allModels.length} selected`;
+  $("send").disabled = running || checkedModels().length === 0;
+}
+
+function renderModels() {
+  const byProvider = new Map();
+  for (const m of allModels) {
+    if (!byProvider.has(m.provider)) byProvider.set(m.provider, []);
+    byProvider.get(m.provider).push(m.model);
+  }
+  const root = $("models");
+  root.replaceChildren();
+  for (const [provider, models] of byProvider) {
+    const row = el("div", { class: "provider" }, el("span", { class: "provider-name", text: provider }));
+    for (const model of models) {
+      // Every model starts checked
+      const box = el("input", { type: "checkbox", "data-model": model, "data-provider": provider });
+      box.checked = true;
+      row.append(el("label", { class: "chip" }, box, model));
+    }
+    row.append(
+      el("button", { type: "button", class: "btn-link", "data-select": "all", "data-provider": provider, text: "All" }),
+      el("button", { type: "button", class: "btn-link", "data-select": "none", "data-provider": provider, text: "None" }),
+    );
+    root.append(row);
+  }
+  updateCount();
+}
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-select]");
+  if (!btn) return;
+  const provider = btn.dataset.provider;
+  const selector = provider ? `#models input[data-provider="${CSS.escape(provider)}"]` : "#models input[data-model]";
+  for (const box of document.querySelectorAll(selector)) box.checked = btn.dataset.select === "all";
+  updateCount();
+});
+$("models").addEventListener("change", updateCount);
+
+async function loadModels() {
+  try {
+    const res = await fetch("/models", { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allModels = await res.json();
+    renderModels();
+  } catch (err) {
+    $("models").replaceChildren(el("span", { class: "hint", text: "No models loaded." }));
+    showNotice("Couldn't load the model list. Open this page through the local server: run " +
+      "<code>chat_ui()</code> from <code>evaluation.py</code> or the notebook.");
+    $("send").disabled = true;
+  }
+}
+
+// ---- Tabs ----
+
+const tabs = new Map(); // model -> { tab, panel, result }
+
+function selectTab(model, focus = false) {
+  for (const [m, t] of tabs) {
+    const on = m === model;
+    t.tab.setAttribute("aria-selected", String(on));
+    t.tab.tabIndex = on ? 0 : -1;
+    t.panel.hidden = !on;
+  }
+  if (focus) tabs.get(model).tab.focus();
+}
+
+$("tabs").addEventListener("keydown", (e) => {
+  const keys = { ArrowRight: 1, ArrowLeft: -1 };
+  if (!(e.key in keys) && e.key !== "Home" && e.key !== "End") return;
+  const models = [...tabs.keys()];
+  const current = models.findIndex((m) => tabs.get(m).tab.getAttribute("aria-selected") === "true");
+  let next = e.key === "Home" ? 0 : e.key === "End" ? models.length - 1
+    : (current + keys[e.key] + models.length) % models.length;
+  selectTab(models[next], true);
+  e.preventDefault();
+});
+
+function buildTabs(models) {
+  tabs.clear();
+  $("tabs").replaceChildren();
+  $("panels").replaceChildren();
+  models.forEach((model, i) => {
+    const id = `m${i}`;
+    const tab = el("button", {
+      type: "button", class: "tab", role: "tab", id: `tab-${id}`, "aria-controls": `panel-${id}`,
+    }, el("span", { class: "status wait", "aria-label": "Running" }), model, el("span", { class: "cost" }));
+    const panel = el("div", { class: "tabpanel", role: "tabpanel", id: `panel-${id}`, "aria-labelledby": `tab-${id}` },
+      el("p", { class: "waiting", text: `Waiting for ${model}…` }));
+    tab.addEventListener("click", () => selectTab(model));
+    $("tabs").append(tab);
+    $("panels").append(panel);
+    tabs.set(model, { tab, panel, result: null });
+  });
+  selectTab(models[0]);
+}
+
+function metaItem(label, value, cls = "") {
+  return el("div", {}, el("div", { class: "meta-label", text: label }), el("div", { class: "meta-value " + cls, text: value }));
+}
+
+function fillTab(result) {
+  const t = tabs.get(result.model);
+  if (!t) return;
+  t.result = result;
+  const usage = result.usage;
+  const cost = usage && usage.cost ? usage.cost.total_cost : null;
+  const unusualStop = !result.error && !NORMAL_STOPS.has(result.stop_reason);
+
+  const status = t.tab.querySelector(".status");
+  status.className = "status " + (result.error ? "err" : unusualStop ? "warn" : "ok");
+  status.textContent = result.error ? "✕" : unusualStop ? "!" : "✓";
+  status.setAttribute("aria-label", result.error ? "Failed" : unusualStop ? `Stopped: ${result.stop_reason}` : "Done");
+  t.tab.querySelector(".cost").textContent = result.error ? "" : fmtCost(cost);
+
+  const copy = el("button", { type: "button", class: "btn-link", text: "Copy response" });
+  copy.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(result.response); copy.textContent = "Copied"; }
+    catch { copy.textContent = "Copy failed"; }
+    setTimeout(() => { copy.textContent = "Copy response"; }, 1500);
+  });
+
+  const children = [];
+  if (result.error) {
+    children.push(el("pre", { class: "response error", text: result.error }));
+  } else {
+    children.push(el("div", { class: "panel-tools" }, copy));
+    children.push(el("pre", { class: "response", text: result.response || "(empty response)" }));
+  }
+  const meta = el("div", { class: "meta" },
+    metaItem("Provider", result.provider || "?"),
+    metaItem("Time", `${result.seconds.toFixed(2)} s`),
+  );
+  if (!result.error) {
+    meta.append(metaItem("Stop reason", result.stop_reason || "?", unusualStop ? "warn" : ""));
+  }
+  if (usage) {
+    meta.append(metaItem("Input tokens", fmtInt(usage.input_tokens)), metaItem("Output tokens", fmtInt(usage.output_tokens)));
+    if ("reasoning_tokens" in usage) meta.append(metaItem("of which reasoning", fmtInt(usage.reasoning_tokens)));
+    meta.append(
+      metaItem("Cache read", fmtInt(usage.cache_read_input_tokens)),
+      metaItem("Cache write", fmtInt(usage.cache_creation_input_tokens)),
+      metaItem("Estimated cost", fmtCost(cost)),
+    );
+  }
+  children.push(meta);
+  t.panel.replaceChildren(...children);
+}
+
+function updateSummary(prompt, doneMsg) {
+  const results = [...tabs.values()].map((t) => t.result).filter(Boolean);
+  const ok = results.filter((r) => !r.error).length;
+  const failed = results.length - ok;
+  const total = results.reduce((s, r) => s + (r.usage && r.usage.cost ? r.usage.cost.total_cost : 0), 0);
+  const summary = $("summary");
+  summary.replaceChildren();
+  const pending = tabs.size - results.length;
+  summary.append(
+    el("strong", { text: `${ok} of ${tabs.size} succeeded` }),
+    failed ? ` · ${failed} failed` : "",
+    pending ? ` · ${pending} running` : "",
+    " · total ", el("strong", { class: "num", text: fmtCost(total) }),
+  );
+  if (doneMsg) summary.append(" · " + doneMsg);
+  summary.append(el("span", { class: "prompt", text: "Prompt: " + prompt, title: prompt }));
+}
+
+// ---- Sending ----
+
+async function send() {
+  const prompt = $("prompt").value;
+  const models = checkedModels();
+  if (running || !prompt.trim() || models.length === 0) return;
+
+  running = true;
+  updateCount();
+  showNotice("");
+  $("send").textContent = "Running…";
+  $("results").hidden = false;
+  buildTabs(models);
+  updateSummary(prompt);
+
+  let doneMsg = "";
+  try {
+    const res = await fetch("/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, system: $("system").value, models, log: $("log").checked }),
+    });
+    if (!res.ok) throw new Error(`The server refused the request (HTTP ${res.status})`);
+
+    // One JSON object per line, sent as each model finishes
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+      let nl;
+      while ((nl = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        if (!line) continue;
+        const msg = JSON.parse(line);
+        if (msg.type === "result") {
+          fillTab(msg.result);
+          updateSummary(prompt);
+        } else if (msg.type === "done") {
+          doneMsg = msg.logged ? "logged" : msg.log_error ? "not logged: " + msg.log_error : "not logged";
+        }
+      }
+      if (done) break;
+    }
+  } catch (err) {
+    showNotice("");
+    $("notice").textContent = String(err.message || err);
+    $("notice").hidden = false;
+  } finally {
+    // Any tab still waiting never got a result, e.g. because the server stopped
+    for (const [model, t] of tabs) {
+      if (!t.result) {
+        const status = t.tab.querySelector(".status");
+        status.className = "status err";
+        status.textContent = "✕";
+        t.panel.replaceChildren(el("p", { class: "response error", text: `No result received for ${model}.` }));
+      }
+    }
+    updateSummary(prompt, doneMsg);
+    running = false;
+    $("send").textContent = "Send";
+    updateCount();
+  }
+}
+
+$("composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+$("prompt").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+});
+
+loadModels();
+</script>
+</body>
+</html>

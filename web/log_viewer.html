@@ -213,6 +213,7 @@ tbody tr:last-child td { border-bottom: none; }
           <option value="all">All</option>
           <option value="evaluate">Single model (evaluate)</option>
           <option value="evaluate_all_models">All models (evaluate_all_models)</option>
+          <option value="chat">Chat page (chat_ui)</option>
         </select>
       </label>
       <label class="field">Provider
@@ -814,7 +815,7 @@ function runCard(run) {
   const total = Array.isArray(entry.results) ? entry.results.filter(isResult).length : rows.length;
   const errors = rows.filter((r) => r.error).length;
   const hasCost = rows.some((r) => r.totalCost != null);
-  const typeLabel = first.type === "evaluate_all_models" ? "All models" : first.type === "evaluate" ? "Single model" : first.type;
+  const typeLabel = first.type === "evaluate_all_models" ? "All models" : first.type === "evaluate" ? "Single model" : first.type === "chat" ? "Chat page" : first.type;
   const modelsLabel = rows.length === 1 && total === 1 ? first.model
     : rows.length === total ? plural(total, "model") : `${rows.length} of ${total} models`;
 
