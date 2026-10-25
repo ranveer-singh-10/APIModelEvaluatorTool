@@ -7,14 +7,23 @@ from openai.types.responses import Response
 SPACER = "--------------------------"
 client = OpenAI()
 
-# USD per million tokens. Estimates only, taken from third-party pages - check against https://openai.com/api/pricing
+# USD per million tokens, standard tier. Estimates only, from https://developers.openai.com/api/docs/pricing (checked 2026-10-25)
 MODEL_PRICING = {
     "gpt-6-astra": {"input": 10.00, "output": 50.00, "cache_read": 1.00},
-    "gpt-6.1-sol": {"input": 2.00,  "output": 10.00, "cache_read": 0.20},
+    "gpt-6.1-sol": {"input": 2.00,  "output": 10.00, "cache_read": 0.10},
     "gpt-6-sol":   {"input": 2.00,  "output": 10.00, "cache_read": 0.20},
     "gpt-6-luna":  {"input": 0.10,  "output": 0.50,  "cache_read": 0.01},
 }
 
+# Every GPT-6 model charges more once the prompt goes over 272K tokens
+LONG_CONTEXT_PRICING = {
+    "gpt-6-astra": {"threshold": 272_000, "input": 20.00, "output": 75.00, "cache_read": 2.00},
+    "gpt-6.1-sol": {"threshold": 272_000, "input": 4.00,  "output": 15.00, "cache_read": 0.20},
+    "gpt-6-sol":   {"threshold": 272_000, "input": 4.00,  "output": 15.00, "cache_read": 0.40},
+    "gpt-6-luna":  {"threshold": 272_000, "input": 0.20,  "output": 0.75,  "cache_read": 0.02},
+}
+
+# The 30 minute cache rate. 12 hour writes cost 2x, but the usage doesn't say which TTL was used, so this assumes 30 minutes
 CACHE_WRITE_MULTIPLIER = 1.25
 
 def list_models():
@@ -66,6 +75,11 @@ def estimate_cost(model, usage):
         return None
 
     counts = _token_counts(usage)
+    long_context = LONG_CONTEXT_PRICING.get(model)
+    prompt_tokens = counts["input_tokens"] + counts["cache_read_input_tokens"] + counts["cache_creation_input_tokens"]
+    if long_context and prompt_tokens > long_context["threshold"]:
+        pricing = long_context
+
     per_token = 1_000_000
     input_cost = counts["input_tokens"] * pricing["input"] / per_token
     output_cost = counts["output_tokens"] * pricing["output"] / per_token

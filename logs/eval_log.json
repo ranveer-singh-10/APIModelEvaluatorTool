@@ -8,6 +8,7 @@
     "results": [
       {
         "model": "claude-haiku-5-5",
+        "provider": "anthropic",
         "seconds": 1.1084410000003118,
         "stop_reason": "end_turn",
         "response": "Quantum computing is a computing paradigm that uses quantum-mechanical phenomena such as superposition and entanglement to process information in ways that can solve certain problems much faster than classical computers.",
@@ -38,6 +39,7 @@
     "results": [
       {
         "model": "claude-fable-5-1",
+        "provider": "anthropic",
         "seconds": 3.215078399999584,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies a lot depending on which part you're asking about:\n\n- **Core:** about 15 million °C (27 million °F) — where nuclear fusion happens\n- **Surface (photosphere):** about 5,500 °C (9,900 °F)\n- **Sunspots:** cooler, around 3,500–4,000 °C\n- **Corona (outer atmosphere):** surprisingly, 1–3 million °C — much hotter than the surface, which is still an active area of research\n\nIf you meant something else, like how hot it feels sitting *in* the sun on Earth, let me know and I can help with that instead.",
@@ -59,6 +61,7 @@
       },
       {
         "model": "claude-opus-5-5",
+        "provider": "anthropic",
         "seconds": 4.271624900000461,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies a lot depending on which part you're talking about:\n\n- **Core:** about **15 million °C** (27 million °F). Nuclear fusion happens here, turning hydrogen into helium.\n- **Radiative and convective zones:** cooling outward from about 7 million °C to around 2 million °C.\n- **Surface (photosphere):** about **5,500 °C** (10,000 °F). This is the visible \"surface\" we see.\n- **Sunspots:** cooler patches, around 3,500–4,500 °C. They look dark only by contrast.\n- **Chromosphere:** rises from about 4,000 °C to around 20,000 °C.\n- **Corona (outer atmosphere):** a surprising **1–3 million °C**, far hotter than the surface. Why the corona is so hot is still an active area of research, with magnetic activity thought to be the main cause.\n\nSo the short answer is about 5,500 °C at the surface and about 15 million °C at the center.",
@@ -80,6 +83,7 @@
       },
       {
         "model": "claude-opus-5",
+        "provider": "anthropic",
         "seconds": 8.882526600000347,
         "stop_reason": "end_turn",
         "response": "**The Sun's temperature varies a lot depending on where you look:**\n\n| Region | Temperature |\n|---|---|\n| **Core** | ~15 million °C (27 million °F) — where hydrogen fuses into helium |\n| **Radiative zone** | ~7 million → 2 million °C |\n| **Convective zone** | ~2 million → 5,500 °C |\n| **Photosphere** (visible surface) | ~5,500 °C (9,900 °F) |\n| **Chromosphere** | ~4,000 → 20,000 °C |\n| **Corona** (outer atmosphere) | 1–3 million °C |\n\nA curious puzzle: the corona is *hundreds of times hotter* than the surface below it, even though it's farther from the energy source. This \"coronal heating problem\" is still not fully solved — magnetic reconnection and wave heating are the leading explanations.\n\nSunspots are the cool spots, around 3,500 °C, which is why they look dark against the brighter surrounding photosphere.\n\n---\n\n*If you actually meant \"how hot does it get standing in the sun?\" — on a hot day, direct sunlight can feel 6–8 °C (10–15 °F) warmer than the shaded air temperature, and surfaces like asphalt can reach 60–70 °C (140–160 °F).*",
@@ -101,6 +105,7 @@
       },
       {
         "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
         "seconds": 4.445051300000159,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies a lot by region:\n\n| Region | Approximate temperature |\n|---|---|\n| **Core** | ~15 million °C (27 million °F) |\n| **Radiative zone** | ~7 million °C down to ~2 million °C |\n| **Convective zone** | ~2 million °C down to ~5,700 °C |\n| **Surface (photosphere)** | ~5,500 °C (~10,000 °F) |\n| **Chromosphere** | ~4,000 to 25,000 °C |\n| **Corona** (outer atmosphere) | 1 to 3 million °C |\n\n**Notable points:**\n- **Core:** Nuclear fusion happens here, turning hydrogen into helium and releasing the Sun's energy.\n- **Surface:** This is the temperature of the light we actually see.\n- **Corona puzzle:** The corona is hundreds of times hotter than the surface beneath it, which seems backward. Scientists are still working out why, and magnetic wave heating and tiny flares (\"nanoflares\") are leading explanations. NASA's Parker Solar Probe is flying through the corona to help answer this.\n- **Sunspots:** These cooler patches on the surface are about 3,500–4,500 °C. They look dark only by contrast.\n\nIf you meant something else, like how hot it feels standing in sunlight on Earth, I can go into that too.",
@@ -122,6 +127,7 @@
       },
       {
         "model": "claude-sonnet-5",
+        "provider": "anthropic",
         "seconds": 3.8784907999997813,
         "stop_reason": "end_turn",
         "response": "# The Sun's Temperature\n\nThe Sun has different temperatures depending on which layer you're measuring:\n\n| Layer | Temperature |\n|-------|-------------|\n| **Core** | ~15 million °C (27 million °F) |\n| **Surface (photosphere)** | ~5,500°C (9,900°F) |\n| **Corona (outer atmosphere)** | 1-3 million °C (surprisingly hotter than the surface!) |\n\n## Key Points:\n\n- **The core** is where nuclear fusion happens, converting hydrogen into helium and releasing enormous energy—this is the hottest part.\n\n- **The surface** (what we actually see) is much cooler by comparison, though still hot enough to vaporize any known material instantly.\n\n- **The corona mystery**: Scientists are still researching why the Sun's outer atmosphere is hundreds of times hotter than its surface—this is called the \"coronal heating problem\" and remains an active area of solar physics research.\n\nWould you like more detail on any particular layer or how scientists measure these temperatures?",
@@ -143,6 +149,7 @@
       },
       {
         "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
         "seconds": 4.640774899999997,
         "stop_reason": "end_turn",
         "response": "## The Sun's Temperature\n\nThe temperature varies greatly depending on the location:\n\n| Layer | Temperature |\n|-------|-------------|\n| **Core** | ~15 million °C (27 million °F) |\n| **Radiative Zone** | 7-15 million °C |\n| **Surface (Photosphere)** | ~5,500°C (10,000°F) |\n| **Atmosphere (Corona)** | 1-3 **million** °C |\n\n### Interesting Note\nThe **corona** (outer atmosphere) is surprisingly **much hotter** than the surface, which is still not fully explained by scientists. This is known as the **coronal heating problem**.\n\nThe **core** is where nuclear fusion occurs, which is why it reaches the highest temperatures.",
@@ -164,6 +171,7 @@
       },
       {
         "model": "claude-haiku-5-5",
+        "provider": "anthropic",
         "seconds": 2.8659602999996423,
         "stop_reason": "end_turn",
         "response": "It depends on what you mean:\n\n- **How hot the Sun itself is:** The surface (photosphere) is about **5,500°C (about 10,000°F)**. The core reaches about **15 million°C (27 million°F)**.\n- **How hot it feels to you in direct sunlight:** On a sunny day, you can feel 10-15°F (about 6-8°C) hotter than in the shade. Sunlit surfaces get much hotter than the air. Dark asphalt can reach 120-150°F (50-65°C), and dark sand or metal can be hotter still.\n\nIf you meant something else, like how hot it gets outdoors in the sun on a particular day, tell me where you are and I can say more.",
@@ -185,6 +193,7 @@
       },
       {
         "model": "claude-haiku-4-5",
+        "provider": "anthropic",
         "seconds": 1.7279945999998745,
         "stop_reason": "end_turn",
         "response": "# The Sun's Temperature\n\nThe Sun's temperature varies by location:\n\n- **Surface (Photosphere)**: About **5,500°C** (9,932°F)\n- **Core**: About **15 million°C** (27 million°F)\n\nThe core is where nuclear fusion occurs, converting hydrogen into helium and releasing enormous amounts of energy. Interestingly, the Sun's outer atmosphere (corona) is much hotter than its surface—around 1-3 million°C—which is still an unsolved mystery in solar physics!",
@@ -215,6 +224,7 @@
     "results": [
       {
         "model": "claude-fable-5-1",
+        "provider": "anthropic",
         "seconds": 4.20397629999934,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies dramatically depending on which part you mean:\n\n- **Core:** About 15 million °C (27 million °F). This is where nuclear fusion happens, converting hydrogen into helium.\n- **Surface (photosphere):** About 5,500 °C (10,000 °F). This is the visible \"surface\" that emits most of the light we see.\n- **Sunspots:** Cooler regions on the surface, around 3,500–4,000 °C, which is why they look dark by comparison.\n- **Corona (outer atmosphere):** Surprisingly, 1–3 million °C. Why the corona is so much hotter than the surface below it is still an active area of research, though magnetic activity is thought to play a major role.\n\nSo the short answer: roughly 5,500 °C at the surface and about 15 million °C at the center.",
@@ -236,6 +246,7 @@
       },
       {
         "model": "claude-opus-5-5",
+        "provider": "anthropic",
         "seconds": 4.50686400000086,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies a lot depending on where you measure:\n\n- **Core:** About **15 million °C** (27 million °F). This is where nuclear fusion turns hydrogen into helium.\n- **Surface (photosphere):** About **5,500 °C** (about 10,000 °F). This is the visible \"surface\" that emits most of the sunlight we see.\n- **Sunspots:** Cooler patches on the surface, around **3,500–4,500 °C**, which is why they look darker.\n- **Chromosphere:** The layer just above the surface heats up with altitude, from about 4,000 °C to roughly 20,000 °C.\n- **Corona (outer atmosphere):** Surprisingly hot, at **1–3 million °C** or more. Why the corona is so much hotter than the surface is still an active area of research, known as the \"coronal heating problem.\"",
@@ -257,6 +268,7 @@
       },
       {
         "model": "claude-opus-5",
+        "provider": "anthropic",
         "seconds": 7.709140400000251,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies dramatically depending on which layer you're talking about:\n\n**Core:** ~15 million °C (27 million °F) — this is where nuclear fusion converts hydrogen into helium, powering the entire star.\n\n**Radiative and convective zones:** Temperature drops steadily outward, from about 7 million °C near the core's edge down to roughly 2 million °C, then to about 5,500 °C at the top of the convective zone.\n\n**Surface (photosphere):** ~5,500 °C (9,900 °F). This is the visible \"surface\" we see, and it's the coolest part of the Sun. Sunspots are cooler still, around 3,500 °C, which is why they look dark by comparison.\n\n**Chromosphere:** Rises from about 4,000 °C to 20,000 °C.\n\n**Corona:** 1–3 million °C (and even hotter in solar flares). \n\nThat last one is one of the great puzzles in solar physics: the Sun's outer atmosphere is hundreds of times hotter than its surface, even though it's farther from the heat source. This \"coronal heating problem\" is thought to involve magnetic field activity — possibly tiny magnetic reconnection events called nanoflares, or magnetic waves transporting energy outward. NASA's Parker Solar Probe has been flying through the corona since 2021 to investigate.",
@@ -278,6 +290,7 @@
       },
       {
         "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
         "seconds": 3.3884213999990607,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies a lot depending on which part you measure:\n\n- **Core:** about 15 million °C (27 million °F). This is where nuclear fusion takes place.\n- **Radiative and convective zones:** the temperature falls steadily from the core outward, from several million °C to about 2 million °C at the top of the convective zone.\n- **Surface (photosphere):** about 5,500 °C (9,900 °F). This is the visible \"surface\" that gives off sunlight.\n- **Chromosphere:** the layer above the surface, where temperatures rise to roughly 4,000–25,000 °C.\n- **Corona:** the outer atmosphere, at 1–3 million °C (about 2–5 million °F) and sometimes much hotter during flares.\n\nThe corona is far hotter than the surface even though it's farther from the core. This is the \"coronal heating problem,\" and scientists are still working out the details. Magnetic energy is thought to be the main cause, through processes such as magnetic reconnection and waves.\n\nSolar flares can briefly heat material to tens of millions of degrees.",
@@ -299,6 +312,7 @@
       },
       {
         "model": "claude-sonnet-5",
+        "provider": "anthropic",
         "seconds": 4.66184069999872,
         "stop_reason": "end_turn",
         "response": "# The Sun's Temperature\n\nThe Sun has different temperatures depending on which layer you're measuring:\n\n## Core\n- **~15 million °C (27 million °F)**\n- This is where nuclear fusion occurs, converting hydrogen into helium\n\n## Surface (Photosphere)\n- **~5,500°C (10,000°F)**\n- This is the visible \"surface\" we see from Earth\n\n## Corona (Outer Atmosphere)\n- **1-3 million °C (2-5 million °F)**\n- Surprisingly, this is much hotter than the surface below it\n\n## Why does the corona mystery exist?\nScientists are still studying why the corona is so much hotter than the photosphere beneath it—this is known as the **\"coronal heating problem.\"** Leading theories involve magnetic field interactions and wave energy transfer, but it remains an active area of solar physics research.\n\n---\n\n**Quick comparison:** If the Sun's surface were as hot as its core, it would vaporize everything in the solar system almost instantly—fusion-level temperatures are almost incomprehensibly extreme!\n\nWould you like more details about any particular layer or how these temperatures are measured?",
@@ -320,6 +334,7 @@
       },
       {
         "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
         "seconds": 4.474438699999155,
         "stop_reason": "end_turn",
         "response": "## The Sun's Temperature\n\nThe Sun's temperature varies significantly depending on the layer:\n\n- **Core**: ~15 million °C (27 million °F) - where nuclear fusion occurs\n- **Radiative Zone**: temperatures drop from ~7 million °C outward\n- **Convection Zone**: ~2 million °C down to ~500,000°C\n- **Photosphere** (visible surface): ~5,500°C (10,000°F)\n- **Chromosphere**: ~20,000°C\n- **Corona** (outer atmosphere): ~1-3 million °C\n\n### Interesting Note\nThe corona is paradoxically *much hotter* than the surface, which is still not fully understood by scientists. This is known as the **coronal heating problem**.",
@@ -341,6 +356,7 @@
       },
       {
         "model": "claude-haiku-5-5",
+        "provider": "anthropic",
         "seconds": 2.1393816999989212,
         "stop_reason": "end_turn",
         "response": "The Sun's **surface** (the photosphere) is about **5,500°C (about 10,000°F)**, or roughly 5,800 kelvin.\n\nIts temperature varies by layer:\n\n- **Core:** about **15 million °C** (27 million °F), where nuclear fusion occurs.\n- **Radiative zone:** from about 2 million °C down to several million °C.\n- **Surface (photosphere):** about **5,500°C**.\n- **Sunspots:** about 3,500–4,000°C, which look dark only because they're cooler than their surroundings.\n- **Corona (outer atmosphere):** over **1 million °C**, and sometimes reaching several million °C. Why it's so much hotter than the surface remains an active area of research.",
@@ -362,6 +378,7 @@
       },
       {
         "model": "claude-haiku-4-5",
+        "provider": "anthropic",
         "seconds": 1.741256400000566,
         "stop_reason": "end_turn",
         "response": "The Sun's temperature varies depending on which part you're measuring:\n\n- **Surface (photosphere)**: About 5,500°C (9,900°F or 5,778 K)\n\n- **Core**: About 15 million°C (27 million°F or 15 million K)\n\nThe core is where nuclear fusion occurs, converting hydrogen into helium and releasing the enormous energy that powers the Sun and sustains life on Earth.",
@@ -392,6 +409,7 @@
     "results": [
       {
         "model": "claude-fable-5-1",
+        "provider": "anthropic",
         "seconds": 1.2960014000000228,
         "stop_reason": "end_turn",
         "response": "Hi! 👋 How can I help you today?",
@@ -413,6 +431,7 @@
       },
       {
         "model": "claude-opus-5-5",
+        "provider": "anthropic",
         "seconds": 1.354423200000383,
         "stop_reason": "end_turn",
         "response": "Hi! 👋 How can I help you today?",
@@ -434,6 +453,7 @@
       },
       {
         "model": "claude-opus-5",
+        "provider": "anthropic",
         "seconds": 1.5517663999999058,
         "stop_reason": "end_turn",
         "response": "Hi! 👋 How's it going? Anything I can help you with today?",
@@ -455,6 +475,7 @@
       },
       {
         "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
         "seconds": 1.0880450999993627,
         "stop_reason": "end_turn",
         "response": "Hi! 👋 How can I help you today?",
@@ -476,6 +497,7 @@
       },
       {
         "model": "claude-sonnet-5",
+        "provider": "anthropic",
         "seconds": 1.3315183999984583,
         "stop_reason": "end_turn",
         "response": "Hi there! 👋 How can I help you today?",
@@ -497,6 +519,7 @@
       },
       {
         "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
         "seconds": 1.535091799998554,
         "stop_reason": "end_turn",
         "response": "Hi there! 👋 How are you doing? Is there something I can help you with today?",
@@ -518,6 +541,7 @@
       },
       {
         "model": "claude-haiku-5-5",
+        "provider": "anthropic",
         "seconds": 0.9194389000003866,
         "stop_reason": "end_turn",
         "response": "Hi there! How can I help you today?",
@@ -539,6 +563,7 @@
       },
       {
         "model": "claude-haiku-4-5",
+        "provider": "anthropic",
         "seconds": 0.7051327999997739,
         "stop_reason": "end_turn",
         "response": "Hi! 👋 How can I help you today?",
@@ -846,6 +871,7 @@
     "results": [
       {
         "model": "claude-fable-5-1",
+        "provider": "anthropic",
         "seconds": 2.0177585000001272,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower is about **330 meters (1,083 feet)** tall, including its antennas. The structure itself (to the top of the third level) is about 300 meters (984 feet), and it was the tallest man-made structure in the world when completed in 1889.",
@@ -867,6 +893,7 @@
       },
       {
         "model": "claude-opus-5-5",
+        "provider": "anthropic",
         "seconds": 3.4594725000006292,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower is about **330 meters (1,083 feet)** tall, including the antennas at its top. A new antenna added in 2022 brought it to this height.\n\n- **Without antennas**, the structure itself is about 300 meters (984 feet), its original height when completed in 1889.\n- The **highest observation deck** is about 276 meters (906 feet) above the ground.\n- The height can vary by roughly 15 cm (6 inches) because the iron expands in summer heat and contracts in the cold.",
@@ -888,6 +915,7 @@
       },
       {
         "model": "claude-opus-5",
+        "provider": "anthropic",
         "seconds": 7.799257699998634,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower stands about **330 meters (1,083 feet)** tall, including the antennas at its summit.\n\nSome additional details:\n\n- **Original height (1889):** 300 m to the top of the structure; various antennas added over the years have increased it, most recently in 2022 when a new digital radio antenna brought it to 330 m.\n- **Observation decks:** First floor at 57 m, second floor at 115 m, and the top deck at roughly 276 m.\n- **Base:** A square measuring 125 m on each side.\n- **Fun fact:** The iron structure expands and contracts with temperature, so the tower can vary in height by about 15 cm between summer and winter.\n\nIt held the title of world's tallest structure from its completion until the Chrysler Building was finished in 1930.",
@@ -909,6 +937,7 @@
       },
       {
         "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
         "seconds": 2.4711927000007563,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower is about **330 meters (1,083 feet)** tall, including its antennas. Its height has changed a bit over time:\n\n- **Original height (1889):** 312 meters (1,024 feet)\n- **Today:** about 330 meters, after broadcast antennas were added on top\n\nThe structure itself, without the antennas, is roughly 300 meters. The tower can also vary by around 15 cm (6 inches) depending on the temperature, because the iron expands in the heat.\n\nWhen it was finished, it was the tallest man-made structure in the world, a title it held until the Chrysler Building in New York was completed in 1930.",
@@ -930,6 +959,7 @@
       },
       {
         "model": "claude-sonnet-5",
+        "provider": "anthropic",
         "seconds": 2.6479495000003226,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower in Paris stands at approximately **330 meters (1,083 feet)** tall, including its antennas.\n\nHere's a breakdown:\n- **Original height (without antennas):** 300 meters (984 feet)\n- **Height with antennas:** 330 meters (1,083 feet)\n\nThe height can vary slightly (by up to 15 cm or 6 inches) depending on temperature, as the iron structure expands in heat and contracts in cold.\n\nWhen it was completed in 1889, it was the tallest man-made structure in the world, a title it held for 41 years until the Chrysler Building in New York City surpassed it in 1930.",
@@ -951,6 +981,7 @@
       },
       {
         "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
         "seconds": 2.0455258000001777,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower stands **330 meters (1,083 feet)** tall, including its broadcast antenna at the top. The structure itself (without the antenna) is about **300 meters (984 feet)** tall.\n\nIt was completed in **1889** and was the world's tallest man-made structure for over 40 years.",
@@ -972,6 +1003,7 @@
       },
       {
         "model": "claude-haiku-5-5",
+        "provider": "anthropic",
         "seconds": 1.6378122000005533,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower is about 330 meters (1,083 feet) tall, including its antennas. Without the antennas, it stands about 300 meters (984 feet). It was the tallest man-made structure in the world until the Chrysler Building surpassed it in 1930.",
@@ -993,6 +1025,7 @@
       },
       {
         "model": "claude-haiku-4-5",
+        "provider": "anthropic",
         "seconds": 1.2282290999992256,
         "stop_reason": "end_turn",
         "response": "The Eiffel Tower in Paris is approximately **330 meters (1,083 feet)** tall to its tip.\n\nThis measurement includes its antenna. The height to the top of the iron structure itself (without the antenna) is about 300 meters (984 feet).",
