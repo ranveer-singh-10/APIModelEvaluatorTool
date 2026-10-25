@@ -110,8 +110,8 @@ button, input, select { font: inherit; color: inherit; }
 .table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
-/* Model and Provider are text; the other columns are numbers */
-th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; }
+/* Columns marked text in MODEL_COLUMNS; the others are numbers */
+th.text, td.text { text-align: left; }
 th { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 th button { border: none; background: none; padding: 0; cursor: pointer; font-weight: 600; color: inherit; }
 tbody tr:last-child td { border-bottom: none; }
@@ -373,6 +373,10 @@ function parseLog(text) {
   }
 }
 
+// Text fields come straight from the log file, which may be hand-edited, so they are made strings before any string methods run.
+// Objects are shown as JSON so their contents can still be read and searched.
+const str = (v, fallback) => (v ? (typeof v === "object" ? JSON.stringify(v) : String(v)) : fallback);
+
 function loadEntries(data, source) {
   if (!Array.isArray(data)) throw new Error("The log should be a JSON array of runs.");
   state.entries = data;
@@ -386,7 +390,7 @@ function loadEntries(data, source) {
   const known = new Map();
   for (const e of data) {
     for (const r of Array.isArray(e && e.results) ? e.results : []) {
-      if (r && r.model && r.provider && !known.has(r.model)) known.set(r.model, r.provider);
+      if (r && r.model && r.provider && !known.has(String(r.model))) known.set(String(r.model), String(r.provider));
     }
   }
 
@@ -396,24 +400,24 @@ function loadEntries(data, source) {
     for (const r of results) {
       const usage = r.usage || null;
       const cost = usage && usage.cost ? usage.cost : null;
-      const model = r.model || "unknown";
+      const model = str(r.model, "unknown");
       if (!state.modelOrder.includes(model)) state.modelOrder.push(model);
       state.rows.push({
         runId,
         timestamp: e.timestamp || "",
         date: date && !isNaN(date) ? date : null,
-        type: e.type || "unknown",
+        type: str(e.type, "unknown"),
         prompt: promptText(e.prompt),
         system: e.system ? String(e.system) : "",
         model,
-        provider: r.provider || known.get(model) || inferProvider(model),
+        provider: str(r.provider, known.get(model) || inferProvider(model)),
         seconds: num(r.seconds),
-        stopReason: r.stop_reason || "",
-        response: r.response || "",
+        stopReason: str(r.stop_reason, ""),
+        response: str(r.response, ""),
         usage,
         cost,
         totalCost: cost ? num(cost.total_cost) : null,
-        error: r.error || null,
+        error: str(r.error, null),
       });
     }
   });
@@ -590,9 +594,10 @@ function renderTiles(rows, runCount) {
   );
 }
 
+// text columns are left-aligned and first sort ascending; the rest first sort highest first
 const MODEL_COLUMNS = [
-  { key: "model", label: "Model", fmt: (v) => v },
-  { key: "provider", label: "Provider", fmt: (v) => v },
+  { key: "model", label: "Model", fmt: (v) => v, text: true },
+  { key: "provider", label: "Provider", fmt: (v) => v, text: true },
   { key: "calls", label: "Calls", fmt: (v) => v.toLocaleString() },
   { key: "errors", label: "Errors", fmt: (v) => v.toLocaleString() },
   { key: "totalCost", label: "Total cost", fmt: fmtCost },
@@ -612,11 +617,11 @@ function renderModelTable(agg) {
   const sortHeader = (col) => {
     const active = state.modelSort.key === col.key;
     const arrow = active ? (state.modelSort.dir === 1 ? " ▲" : " ▼") : "";
-    return h("th", { scope: "col", "aria-sort": active ? (state.modelSort.dir === 1 ? "ascending" : "descending") : null },
+    return h("th", { scope: "col", class: col.text ? "text" : null, "aria-sort": active ? (state.modelSort.dir === 1 ? "ascending" : "descending") : null },
       h("button", {
         type: "button",
         onclick: () => {
-          state.modelSort = active ? { key: col.key, dir: -state.modelSort.dir } : { key: col.key, dir: typeof agg[0][col.key] === "string" ? 1 : -1 };
+          state.modelSort = active ? { key: col.key, dir: -state.modelSort.dir } : { key: col.key, dir: col.text ? 1 : -1 };
           renderModelTable(agg);
         },
       }, col.label + arrow));
@@ -626,7 +631,7 @@ function renderModelTable(agg) {
       h("thead", {}, h("tr", {}, MODEL_COLUMNS.map(sortHeader))),
       h("tbody", {}, rows.map((a) =>
         h("tr", {}, MODEL_COLUMNS.map((col) =>
-          h("td", { class: col.key === "errors" && a.errors ? "err-count" : null }, col.fmt(a[col.key]))))))));
+          h("td", { class: [col.text && "text", col.key === "errors" && a.errors && "err-count"].filter(Boolean).join(" ") || null }, col.fmt(a[col.key]))))))));
 }
 
 // Nulls always sort last
