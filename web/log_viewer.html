@@ -218,8 +218,6 @@ tbody tr:last-child td { border-bottom: none; }
       <label class="field">Provider
         <select id="f-provider">
           <option value="all">All</option>
-          <option value="anthropic">Anthropic</option>
-          <option value="openai">OpenAI</option>
         </select>
       </label>
       <label class="field">Status
@@ -324,6 +322,7 @@ const state = {
   entries: [],
   rows: [],
   modelOrder: [],
+  modelProvider: new Map(),
   source: "",
   excludedModels: new Set(),
   filters: { text: "", type: "all", provider: "all", status: "all", from: "", to: "" },
@@ -354,7 +353,8 @@ function promptText(p) {
   return JSON.stringify(p, null, 2);
 }
 
-// Entries logged before results recorded a provider get one from the model name, matching evaluation.provider_for
+// Last resort for entries logged before results recorded a provider, when no other result for the model recorded one.
+// This copies only the name-prefix fallback in evaluation.provider_for, so keep the two in step.
 function inferProvider(model) {
   if (model.startsWith("claude-")) return "anthropic";
   if (/^(gpt-|o1|o3|o4)/.test(model)) return "openai";
@@ -382,6 +382,14 @@ function loadEntries(data, source) {
   state.rows = [];
   state.modelOrder = [];
 
+  // Providers recorded by newer results, used for older results of the same model
+  const known = new Map();
+  for (const e of data) {
+    for (const r of Array.isArray(e && e.results) ? e.results : []) {
+      if (r && r.model && r.provider && !known.has(r.model)) known.set(r.model, r.provider);
+    }
+  }
+
   data.forEach((e, runId) => {
     const results = Array.isArray(e && e.results) ? e.results : [];
     const date = e && e.timestamp ? new Date(e.timestamp) : null;
@@ -398,7 +406,7 @@ function loadEntries(data, source) {
         prompt: promptText(e.prompt),
         system: e.system ? String(e.system) : "",
         model,
-        provider: r.provider || inferProvider(model),
+        provider: r.provider || known.get(model) || inferProvider(model),
         seconds: num(r.seconds),
         stopReason: r.stop_reason || "",
         response: r.response || "",
@@ -410,8 +418,12 @@ function loadEntries(data, source) {
     }
   });
 
+  state.modelProvider = new Map();
+  for (const r of state.rows) if (!state.modelProvider.has(r.model)) state.modelProvider.set(r.model, r.provider);
+
   hideNotice();
   if (!data.length) showNotice("The log is empty. Run evaluate(...) or evaluate_all_models(...) with log=True, then press Reload.");
+  renderProviderFilter();
   renderModelFilter();
   render();
 }
@@ -477,13 +489,34 @@ function filteredRows() {
   });
 }
 
+const PROVIDER_LABELS = { anthropic: "Anthropic", openai: "OpenAI" };
+
+// One option per provider in the log, so providers added later (and "unknown") can be picked too
+function renderProviderFilter() {
+  const select = $("#f-provider");
+  const providers = [...new Set(state.rows.map((r) => r.provider))];
+  if (!providers.includes(state.filters.provider)) state.filters.provider = "all";
+  select.replaceChildren(
+    h("option", { value: "all" }, "All"),
+    ...providers.map((p) => h("option", { value: p }, PROVIDER_LABELS[p] || p)),
+  );
+  select.value = state.filters.provider;
+}
+
+// Models of the selected provider, so the checkboxes and All/None only cover models that can be shown
+function visibleModels() {
+  const p = state.filters.provider;
+  return p === "all" ? state.modelOrder : state.modelOrder.filter((m) => state.modelProvider.get(m) === p);
+}
+
 function renderModelFilter() {
   const box = $("#f-models");
   box.replaceChildren();
-  if (!state.modelOrder.length) return;
+  const models = visibleModels();
+  if (!models.length) return;
   box.append(
     h("span", {}, "Models:"),
-    ...state.modelOrder.map((m) =>
+    ...models.map((m) =>
       h("label", { class: "chip" },
         h("input", {
           type: "checkbox",
@@ -496,8 +529,8 @@ function renderModelFilter() {
         }),
         m)
     ),
-    h("button", { class: "btn-link", type: "button", onclick: () => { state.excludedModels.clear(); renderModelFilter(); render(); } }, "All"),
-    h("button", { class: "btn-link", type: "button", onclick: () => { state.modelOrder.forEach((m) => state.excludedModels.add(m)); renderModelFilter(); render(); } }, "None"),
+    h("button", { class: "btn-link", type: "button", onclick: () => { models.forEach((m) => state.excludedModels.delete(m)); renderModelFilter(); render(); } }, "All"),
+    h("button", { class: "btn-link", type: "button", onclick: () => { models.forEach((m) => state.excludedModels.add(m)); renderModelFilter(); render(); } }, "None"),
   );
 }
 
@@ -905,7 +938,12 @@ function bindFilter(id, key, event) {
 }
 bindFilter("#f-text", "text", "input");
 bindFilter("#f-type", "type", "change");
-bindFilter("#f-provider", "provider", "change");
+$("#f-provider").addEventListener("change", (e) => {
+  state.filters.provider = e.target.value;
+  state.runLimit = 50;
+  renderModelFilter();
+  render();
+});
 bindFilter("#f-status", "status", "change");
 bindFilter("#f-from", "from", "change");
 bindFilter("#f-to", "to", "change");

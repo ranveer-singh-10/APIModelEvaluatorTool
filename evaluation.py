@@ -26,7 +26,8 @@ def provider_for(model):
     for name, provider in PROVIDERS.items():
         if model in provider.MODEL_PRICING:
             return name
-    # Unpriced models still run (with no cost estimate) if the name says which provider they belong to
+    # Unpriced models still run (with no cost estimate) if the name says which provider they belong to.
+    # web/log_viewer.html copies these prefixes in inferProvider, so keep the two in step.
     if model.startswith("claude-"):
         return "anthropic"
     if model.startswith(("gpt-", "o1", "o3", "o4")):
