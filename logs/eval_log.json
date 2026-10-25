@@ -559,5 +559,736 @@
         "error": null
       }
     ]
+  },
+  {
+    "timestamp": "2026-10-25T00:12:12.436061+00:00",
+    "type": "evaluate_all_models",
+    "prompt": "Say Hi",
+    "system": null,
+    "total_cost": 0.0048546,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "provider": "anthropic",
+        "seconds": 1.702193899998747,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 17,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 30,
+          "cost": {
+            "input_cost": 0.00013,
+            "output_cost": 0.00085,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00098
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "provider": "anthropic",
+        "seconds": 1.4165541999991547,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 17,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 30,
+          "cost": {
+            "input_cost": 5.2e-05,
+            "output_cost": 0.00034,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00039200000000000004
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "provider": "anthropic",
+        "seconds": 1.6084109000003082,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 What can I do for you today?",
+        "usage": {
+          "input_tokens": 11,
+          "output_tokens": 67,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 78,
+          "cost": {
+            "input_cost": 5.5e-05,
+            "output_cost": 0.001675,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00173
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
+        "seconds": 1.131571999998414,
+        "stop_reason": "end_turn",
+        "response": "Hi there! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 18,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 31,
+          "cost": {
+            "input_cost": 2.6e-05,
+            "output_cost": 0.00018,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00020600000000000002
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "provider": "anthropic",
+        "seconds": 1.3308718999996927,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 11,
+          "output_tokens": 49,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 60,
+          "cost": {
+            "input_cost": 2.2e-05,
+            "output_cost": 0.00049,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000512
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "seconds": 1.6393755999997666,
+        "stop_reason": "end_turn",
+        "response": "Hi there! 👋 How are you doing? Is there something I can help you with today?",
+        "usage": {
+          "input_tokens": 9,
+          "output_tokens": 25,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 34,
+          "cost": {
+            "input_cost": 2.7e-05,
+            "output_cost": 0.000375,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000402
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 0.7149925000012445,
+        "stop_reason": "end_turn",
+        "response": "Hi there! How's your day going?",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 13,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 26,
+          "cost": {
+            "input_cost": 1.3e-06,
+            "output_cost": 6.5e-06,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 7.8e-06
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "provider": "anthropic",
+        "seconds": 0.7003788000001805,
+        "stop_reason": "end_turn",
+        "response": "Hi! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 9,
+          "output_tokens": 16,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 25,
+          "cost": {
+            "input_cost": 9e-06,
+            "output_cost": 8e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 8.900000000000001e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-astra",
+        "provider": "openai",
+        "seconds": 2.2320443999997224,
+        "stop_reason": "completed",
+        "response": "Hi!",
+        "usage": {
+          "input_tokens": 8,
+          "output_tokens": 6,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 14,
+          "cost": {
+            "input_cost": 8e-05,
+            "output_cost": 0.0003,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00037999999999999997
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "provider": "openai",
+        "seconds": 1.1876971000001504,
+        "stop_reason": "completed",
+        "response": "Hi!",
+        "usage": {
+          "input_tokens": 8,
+          "output_tokens": 6,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 14,
+          "cost": {
+            "input_cost": 1.6e-05,
+            "output_cost": 6e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 7.6e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-sol",
+        "provider": "openai",
+        "seconds": 0.8981826999988698,
+        "stop_reason": "completed",
+        "response": "Hi!",
+        "usage": {
+          "input_tokens": 8,
+          "output_tokens": 6,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 14,
+          "cost": {
+            "input_cost": 1.6e-05,
+            "output_cost": 6e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 7.6e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 0.8467573999987508,
+        "stop_reason": "completed",
+        "response": "Hi!",
+        "usage": {
+          "input_tokens": 8,
+          "output_tokens": 6,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 14,
+          "cost": {
+            "input_cost": 8.000000000000001e-07,
+            "output_cost": 3e-06,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 3.8e-06
+          }
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-10-25T00:36:19.064031+00:00",
+    "type": "evaluate_all_models",
+    "prompt": "How tall is the eiffel tower in paris?",
+    "system": null,
+    "total_cost": 0.0283143,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "seconds": 2.0177585000001272,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower is about **330 meters (1,083 feet)** tall, including its antennas. The structure itself (to the top of the third level) is about 300 meters (984 feet), and it was the tallest man-made structure in the world when completed in 1889.",
+        "usage": {
+          "input_tokens": 23,
+          "output_tokens": 86,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 109,
+          "cost": {
+            "input_cost": 0.00023,
+            "output_cost": 0.0043,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00453
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "seconds": 3.4594725000006292,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower is about **330 meters (1,083 feet)** tall, including the antennas at its top. A new antenna added in 2022 brought it to this height.\n\n- **Without antennas**, the structure itself is about 300 meters (984 feet), its original height when completed in 1889.\n- The **highest observation deck** is about 276 meters (906 feet) above the ground.\n- The height can vary by roughly 15 cm (6 inches) because the iron expands in summer heat and contracts in the cold.",
+        "usage": {
+          "input_tokens": 23,
+          "output_tokens": 254,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 277,
+          "cost": {
+            "input_cost": 9.2e-05,
+            "output_cost": 0.00508,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.005172
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "seconds": 7.799257699998634,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower stands about **330 meters (1,083 feet)** tall, including the antennas at its summit.\n\nSome additional details:\n\n- **Original height (1889):** 300 m to the top of the structure; various antennas added over the years have increased it, most recently in 2022 when a new digital radio antenna brought it to 330 m.\n- **Observation decks:** First floor at 57 m, second floor at 115 m, and the top deck at roughly 276 m.\n- **Base:** A square measuring 125 m on each side.\n- **Fun fact:** The iron structure expands and contracts with temperature, so the tower can vary in height by about 15 cm between summer and winter.\n\nIt held the title of world's tallest structure from its completion until the Chrysler Building was finished in 1930.",
+        "usage": {
+          "input_tokens": 21,
+          "output_tokens": 504,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 525,
+          "cost": {
+            "input_cost": 0.000105,
+            "output_cost": 0.0126,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.012705
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "seconds": 2.4711927000007563,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower is about **330 meters (1,083 feet)** tall, including its antennas. Its height has changed a bit over time:\n\n- **Original height (1889):** 312 meters (1,024 feet)\n- **Today:** about 330 meters, after broadcast antennas were added on top\n\nThe structure itself, without the antennas, is roughly 300 meters. The tower can also vary by around 15 cm (6 inches) depending on the temperature, because the iron expands in the heat.\n\nWhen it was finished, it was the tallest man-made structure in the world, a title it held until the Chrysler Building in New York was completed in 1930.",
+        "usage": {
+          "input_tokens": 23,
+          "output_tokens": 206,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 229,
+          "cost": {
+            "input_cost": 4.6e-05,
+            "output_cost": 0.00206,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0021060000000000002
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "seconds": 2.6479495000003226,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower in Paris stands at approximately **330 meters (1,083 feet)** tall, including its antennas.\n\nHere's a breakdown:\n- **Original height (without antennas):** 300 meters (984 feet)\n- **Height with antennas:** 330 meters (1,083 feet)\n\nThe height can vary slightly (by up to 15 cm or 6 inches) depending on temperature, as the iron structure expands in heat and contracts in cold.\n\nWhen it was completed in 1889, it was the tallest man-made structure in the world, a title it held for 41 years until the Chrysler Building in New York City surpassed it in 1930.",
+        "usage": {
+          "input_tokens": 21,
+          "output_tokens": 211,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 232,
+          "cost": {
+            "input_cost": 4.2e-05,
+            "output_cost": 0.00211,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.002152
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "seconds": 2.0455258000001777,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower stands **330 meters (1,083 feet)** tall, including its broadcast antenna at the top. The structure itself (without the antenna) is about **300 meters (984 feet)** tall.\n\nIt was completed in **1889** and was the world's tallest man-made structure for over 40 years.",
+        "usage": {
+          "input_tokens": 18,
+          "output_tokens": 81,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 99,
+          "cost": {
+            "input_cost": 5.4e-05,
+            "output_cost": 0.001215,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.001269
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "seconds": 1.6378122000005533,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower is about 330 meters (1,083 feet) tall, including its antennas. Without the antennas, it stands about 300 meters (984 feet). It was the tallest man-made structure in the world until the Chrysler Building surpassed it in 1930.",
+        "usage": {
+          "input_tokens": 23,
+          "output_tokens": 90,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 113,
+          "cost": {
+            "input_cost": 2.3000000000000004e-06,
+            "output_cost": 4.5e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 4.7300000000000005e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "seconds": 1.2282290999992256,
+        "stop_reason": "end_turn",
+        "response": "The Eiffel Tower in Paris is approximately **330 meters (1,083 feet)** tall to its tip.\n\nThis measurement includes its antenna. The height to the top of the iron structure itself (without the antenna) is about 300 meters (984 feet).",
+        "usage": {
+          "input_tokens": 18,
+          "output_tokens": 63,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 81,
+          "cost": {
+            "input_cost": 1.8e-05,
+            "output_cost": 0.000315,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000333
+          }
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-10-25T00:38:13.948818+00:00",
+    "type": "evaluate_all_models",
+    "prompt": "How tall is big ben?",
+    "system": null,
+    "total_cost": 0.0376533,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "provider": "anthropic",
+        "seconds": 3.0363262000009854,
+        "stop_reason": "end_turn",
+        "response": "Big Ben is technically the nickname of the Great Bell inside the clock tower at the Palace of Westminster in London, though the name is commonly used for the tower itself. The tower, officially called the Elizabeth Tower (renamed in 2012 for Queen Elizabeth II's Diamond Jubilee), stands about **96 meters (316 feet)** tall.\n\nA few other figures:\n- The clock faces are about 55 meters (180 feet) above ground.\n- The Great Bell itself is about 2.2 meters (7.2 feet) tall and weighs roughly 13.7 tonnes.\n- There are 334 steps to reach the belfry.",
+        "usage": {
+          "input_tokens": 16,
+          "output_tokens": 216,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 232,
+          "cost": {
+            "input_cost": 0.00016,
+            "output_cost": 0.0108,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.010960000000000001
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "provider": "anthropic",
+        "seconds": 2.588921200000186,
+        "stop_reason": "end_turn",
+        "response": "The tower commonly called **Big Ben** (officially the **Elizabeth Tower**) is about **96 meters (316 feet)** tall.\n\nStrictly speaking, \"Big Ben\" is the nickname of the **Great Bell** inside the tower, which is about 2.2 meters (7.2 feet) tall and weighs roughly 13.7 tonnes.",
+        "usage": {
+          "input_tokens": 16,
+          "output_tokens": 198,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 214,
+          "cost": {
+            "input_cost": 6.4e-05,
+            "output_cost": 0.00396,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.004024
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "provider": "anthropic",
+        "seconds": 6.299994599999991,
+        "stop_reason": "end_turn",
+        "response": "The tower commonly called Big Ben — officially the **Elizabeth Tower** (renamed in 2012 for Queen Elizabeth II's Diamond Jubilee) — stands about **96 metres (316 feet)** tall at the Palace of Westminster in London.\n\nStrictly speaking, \"Big Ben\" is the nickname of the **Great Bell** inside the tower, which is roughly 2.2 m tall, 2.7 m in diameter, and weighs about 13.7 tonnes. Over time the name came to be used for the whole clock tower.\n\nFor scale, the clock faces are about 7 metres across and sit roughly 55 metres above the ground, and there are 334 steps to the belfry.",
+        "usage": {
+          "input_tokens": 14,
+          "output_tokens": 436,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 450,
+          "cost": {
+            "input_cost": 7e-05,
+            "output_cost": 0.0109,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.01097
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
+        "seconds": 1.857300400000895,
+        "stop_reason": "end_turn",
+        "response": "Big Ben is technically the name of the great bell, but people usually use it to mean the clock tower at the Palace of Westminster in London. The tower, officially renamed the **Elizabeth Tower** in 2012, is about **96 meters (316 feet)** tall.\n\nSome other details:\n- The clock tower has **334 steps** to reach the belfry.\n- The bell itself weighs about **13.7 tonnes** (13.5 long tons).\n- The clock faces are about 7 meters (23 feet) in diameter.",
+        "usage": {
+          "input_tokens": 16,
+          "output_tokens": 171,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 187,
+          "cost": {
+            "input_cost": 3.2e-05,
+            "output_cost": 0.00171,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0017419999999999998
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "provider": "anthropic",
+        "seconds": 3.0995975000005274,
+        "stop_reason": "end_turn",
+        "response": "# Big Ben's Height\n\n**Big Ben** technically refers to the Great Bell inside the clock tower, but the name is commonly used for the whole structure. Here are the key measurements:\n\n- **Tower height:** 316 feet (96.3 meters)\n- **Official name:** Elizabeth Tower (renamed in 2012 for Queen Elizabeth II's Diamond Jubilee; previously known as Clock Tower)\n\n## Additional Details\n- The clock faces are about 180 feet (55 meters) above ground\n- Each clock dial is 23 feet (7 meters) in diameter\n- The tower has 334 steps to reach the belfry\n\nThe tower is part of the Houses of Parliament in London and has been a famous landmark since it was completed in 1859.",
+        "usage": {
+          "input_tokens": 14,
+          "output_tokens": 252,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 266,
+          "cost": {
+            "input_cost": 2.8e-05,
+            "output_cost": 0.00252,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.002548
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "seconds": 2.647733800000424,
+        "stop_reason": "end_turn",
+        "response": "**Big Ben** (the Elizabeth Tower) in London stands approximately:\n\n- **96 metres** (315 feet) tall\n\nNote: \"Big Ben\" is technically the name of the **great bell** inside the tower, but the name is commonly used to refer to the whole tower. The tower was renamed **Elizabeth Tower** in 2012 to honor Queen Elizabeth II's Diamond Jubilee.",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 88,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 101,
+          "cost": {
+            "input_cost": 3.9e-05,
+            "output_cost": 0.00132,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.001359
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 2.0529858999998396,
+        "stop_reason": "end_turn",
+        "response": "Big Ben is the nickname for the bell, but the tower that houses it is the **Elizabeth Tower** (formerly the Clock Tower) at the Palace of Westminster in London. It stands about **96 meters (316 feet)** tall.",
+        "usage": {
+          "input_tokens": 16,
+          "output_tokens": 235,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 251,
+          "cost": {
+            "input_cost": 1.6000000000000001e-06,
+            "output_cost": 0.0001175,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0001191
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "provider": "anthropic",
+        "seconds": 1.1987860000008368,
+        "stop_reason": "end_turn",
+        "response": "Big Ben is not a building—it's actually the name of the Great Bell inside the clock tower. The clock tower itself is called the **Elizabeth Tower** (formerly known as the Clock Tower).\n\nThe Elizabeth Tower is approximately **96 meters (316 feet)** tall.",
+        "usage": {
+          "input_tokens": 13,
+          "output_tokens": 61,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 74,
+          "cost": {
+            "input_cost": 1.3e-05,
+            "output_cost": 0.000305,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000318
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-astra",
+        "provider": "openai",
+        "seconds": 4.601881799999319,
+        "stop_reason": "completed",
+        "response": "Big Ben’s tower—officially called **Elizabeth Tower**—is **96 metres (316 feet) tall**. Strictly speaking, “Big Ben” is the nickname of the bell inside, not the tower.",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 67,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 17,
+          "total_tokens": 79,
+          "cost": {
+            "input_cost": 0.00012,
+            "output_cost": 0.00335,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00347
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "provider": "openai",
+        "seconds": 4.390491300000576,
+        "stop_reason": "completed",
+        "response": "Big Ben’s clock tower—officially called **Elizabeth Tower**—is **96 metres (316 feet) tall**. Technically, “Big Ben” is the nickname of the bell inside.",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 113,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 67,
+          "total_tokens": 125,
+          "cost": {
+            "input_cost": 2.4e-05,
+            "output_cost": 0.00113,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0011539999999999999
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-sol",
+        "provider": "openai",
+        "seconds": 1.9572241000005306,
+        "stop_reason": "completed",
+        "response": "The Elizabeth Tower, often called Big Ben, is **96 metres (316 feet)** tall. Strictly speaking, Big Ben is the bell inside the tower.",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 91,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 53,
+          "total_tokens": 103,
+          "cost": {
+            "input_cost": 2.4e-05,
+            "output_cost": 0.00091,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000934
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 2.457462399999713,
+        "stop_reason": "completed",
+        "response": "The Elizabeth Tower commonly called Big Ben is about **96 metres (316 feet) tall**. Strictly speaking, Big Ben is the large bell inside the tower.",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 108,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 69,
+          "total_tokens": 120,
+          "cost": {
+            "input_cost": 1.2000000000000002e-06,
+            "output_cost": 5.4e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 5.52e-05
+          }
+        },
+        "error": null
+      }
+    ]
   }
 ]
