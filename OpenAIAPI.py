@@ -16,11 +16,12 @@ MODEL_PRICING = {
 }
 
 # Every GPT-6 model charges more once the prompt goes over 272K tokens
+LONG_CONTEXT_THRESHOLD = 272_000
 LONG_CONTEXT_PRICING = {
-    "gpt-6-astra": {"threshold": 272_000, "input": 20.00, "output": 75.00, "cache_read": 2.00},
-    "gpt-6.1-sol": {"threshold": 272_000, "input": 4.00,  "output": 15.00, "cache_read": 0.20},
-    "gpt-6-sol":   {"threshold": 272_000, "input": 4.00,  "output": 15.00, "cache_read": 0.40},
-    "gpt-6-luna":  {"threshold": 272_000, "input": 0.20,  "output": 0.75,  "cache_read": 0.02},
+    "gpt-6-astra": {"input": 20.00, "output": 75.00, "cache_read": 2.00},
+    "gpt-6.1-sol": {"input": 4.00,  "output": 15.00, "cache_read": 0.20},
+    "gpt-6-sol":   {"input": 4.00,  "output": 15.00, "cache_read": 0.40},
+    "gpt-6-luna":  {"input": 0.20,  "output": 0.75,  "cache_read": 0.02},
 }
 
 # The 30 minute cache rate. 12 hour writes cost 2x, but the usage doesn't say which TTL was used, so this assumes 30 minutes
@@ -75,9 +76,9 @@ def estimate_cost(model, usage):
         return None
 
     counts = _token_counts(usage)
+    # OpenAI's input_tokens is the whole prompt, cached tokens and cache writes included
     long_context = LONG_CONTEXT_PRICING.get(model)
-    prompt_tokens = counts["input_tokens"] + counts["cache_read_input_tokens"] + counts["cache_creation_input_tokens"]
-    if long_context and prompt_tokens > long_context["threshold"]:
+    if long_context and (usage.input_tokens or 0) > LONG_CONTEXT_THRESHOLD:
         pricing = long_context
 
     per_token = 1_000_000

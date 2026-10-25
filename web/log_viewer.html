@@ -374,8 +374,10 @@ function parseLog(text) {
 }
 
 // Text fields come straight from the log file, which may be hand-edited, so they are made strings before any string methods run.
-// Objects are shown as JSON so their contents can still be read and searched.
-const str = (v, fallback) => (v ? (typeof v === "object" ? JSON.stringify(v) : String(v)) : fallback);
+// Objects are shown as JSON so their contents can still be read and searched. Missing, empty and false values
+// get the fallback (so "error": false means no error); 0 is kept.
+const str = (v, fallback) =>
+  v == null || v === "" || v === false ? fallback : typeof v === "object" ? JSON.stringify(v) : String(v);
 
 function loadEntries(data, source) {
   if (!Array.isArray(data)) throw new Error("The log should be a JSON array of runs.");
@@ -390,7 +392,8 @@ function loadEntries(data, source) {
   const known = new Map();
   for (const e of data) {
     for (const r of Array.isArray(e && e.results) ? e.results : []) {
-      if (r && r.model && r.provider && !known.has(String(r.model))) known.set(String(r.model), String(r.provider));
+      const m = r && str(r.model, null), p = r && str(r.provider, null);
+      if (m != null && p != null && !known.has(m)) known.set(m, p);
     }
   }
 
