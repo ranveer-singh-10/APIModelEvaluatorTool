@@ -355,7 +355,7 @@ function promptText(p) {
 
 // A system prompt logged as a list of blocks (e.g. with cache_control) is shown as its text
 function systemText(s) {
-  if (s == null || s === "") return "";
+  if (!s || (Array.isArray(s) && !s.length)) return "";
   if (typeof s === "string") return s;
   if (Array.isArray(s)) {
     const parts = s.filter((b) => b && typeof b.text === "string").map((b) => b.text);
@@ -390,6 +390,9 @@ function parseLog(text) {
 const str = (v, fallback) =>
   v == null || v === "" || v === false ? fallback : typeof v === "object" ? JSON.stringify(v) : String(v);
 
+// Entries in a run's results that aren't objects (null, false, 0) are skipped everywhere, including the run's model count
+const isResult = (r) => !!r && typeof r === "object";
+
 function loadEntries(data, source) {
   if (!Array.isArray(data)) throw new Error("The log should be a JSON array of runs.");
   state.entries = data;
@@ -403,7 +406,7 @@ function loadEntries(data, source) {
   const known = new Map();
   for (const e of data) {
     for (const r of Array.isArray(e && e.results) ? e.results : []) {
-      if (!r || typeof r !== "object") continue;
+      if (!isResult(r)) continue;
       const m = str(r.model, null), p = str(r.provider, null);
       if (m != null && p != null) known.set(m, p);
     }
@@ -413,7 +416,7 @@ function loadEntries(data, source) {
     const results = Array.isArray(e && e.results) ? e.results : [];
     const date = e && e.timestamp ? new Date(e.timestamp) : null;
     for (const r of results) {
-      if (!r || typeof r !== "object") continue;
+      if (!isResult(r)) continue;
       const usage = r.usage || null;
       const cost = usage && usage.cost ? usage.cost : null;
       const model = str(r.model, "unknown");
@@ -439,7 +442,8 @@ function loadEntries(data, source) {
   });
 
   state.modelProvider = new Map();
-  for (const r of state.rows) if (!state.modelProvider.has(r.model)) state.modelProvider.set(r.model, r.provider);
+  // Rows are in log order, so each model ends up with its newest provider, as in `known`
+  for (const r of state.rows) state.modelProvider.set(r.model, r.provider);
 
   hideNotice();
   if (!data.length) showNotice("The log is empty. Run evaluate(...) or evaluate_all_models(...) with log=True, then press Reload.");
@@ -807,7 +811,7 @@ function runCard(run) {
   const entry = state.entries[runId] || {};
   const first = rows[0];
   const open = state.expanded.has(runId);
-  const total = Array.isArray(entry.results) ? entry.results.length : rows.length;
+  const total = Array.isArray(entry.results) ? entry.results.filter(isResult).length : rows.length;
   const errors = rows.filter((r) => r.error).length;
   const hasCost = rows.some((r) => r.totalCost != null);
   const typeLabel = first.type === "evaluate_all_models" ? "All models" : first.type === "evaluate" ? "Single model" : first.type;
