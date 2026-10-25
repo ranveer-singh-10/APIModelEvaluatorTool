@@ -353,6 +353,17 @@ function promptText(p) {
   return JSON.stringify(p, null, 2);
 }
 
+// A system prompt logged as a list of blocks (e.g. with cache_control) is shown as its text
+function systemText(s) {
+  if (s == null || s === "") return "";
+  if (typeof s === "string") return s;
+  if (Array.isArray(s)) {
+    const parts = s.filter((b) => b && typeof b.text === "string").map((b) => b.text);
+    if (parts.length) return parts.join("\n\n");
+  }
+  return JSON.stringify(s, null, 2);
+}
+
 // Last resort for entries logged before results recorded a provider, when no other result for the model recorded one.
 // This copies only the name-prefix fallback in evaluation.provider_for, so keep the two in step.
 function inferProvider(model) {
@@ -375,7 +386,7 @@ function parseLog(text) {
 
 // Text fields come straight from the log file, which may be hand-edited, so they are made strings before any string methods run.
 // Objects are shown as JSON so their contents can still be read and searched. Missing, empty and false values
-// get the fallback (so "error": false means no error); 0 is kept.
+// get the fallback (so "error": false means no error); 0 is kept, except as an error, where it also means none.
 const str = (v, fallback) =>
   v == null || v === "" || v === false ? fallback : typeof v === "object" ? JSON.stringify(v) : String(v);
 
@@ -388,12 +399,13 @@ function loadEntries(data, source) {
   state.rows = [];
   state.modelOrder = [];
 
-  // Providers recorded by newer results, used for older results of the same model
+  // The provider most recently recorded for each model, used for results that didn't record one
   const known = new Map();
   for (const e of data) {
     for (const r of Array.isArray(e && e.results) ? e.results : []) {
-      const m = r && str(r.model, null), p = r && str(r.provider, null);
-      if (m != null && p != null && !known.has(m)) known.set(m, p);
+      if (!r || typeof r !== "object") continue;
+      const m = str(r.model, null), p = str(r.provider, null);
+      if (m != null && p != null) known.set(m, p);
     }
   }
 
@@ -401,17 +413,18 @@ function loadEntries(data, source) {
     const results = Array.isArray(e && e.results) ? e.results : [];
     const date = e && e.timestamp ? new Date(e.timestamp) : null;
     for (const r of results) {
+      if (!r || typeof r !== "object") continue;
       const usage = r.usage || null;
       const cost = usage && usage.cost ? usage.cost : null;
       const model = str(r.model, "unknown");
       if (!state.modelOrder.includes(model)) state.modelOrder.push(model);
       state.rows.push({
         runId,
-        timestamp: e.timestamp || "",
+        timestamp: str(e.timestamp, ""),
         date: date && !isNaN(date) ? date : null,
         type: str(e.type, "unknown"),
         prompt: promptText(e.prompt),
-        system: e.system ? String(e.system) : "",
+        system: systemText(e.system),
         model,
         provider: str(r.provider, known.get(model) || inferProvider(model)),
         seconds: num(r.seconds),
@@ -420,7 +433,7 @@ function loadEntries(data, source) {
         usage,
         cost,
         totalCost: cost ? num(cost.total_cost) : null,
-        error: str(r.error, null),
+        error: r.error === 0 ? null : str(r.error, null),
       });
     }
   });
