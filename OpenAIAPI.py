@@ -7,21 +7,23 @@ from openai.types.responses import Response
 SPACER = "--------------------------"
 client = OpenAI()
 
-# USD per million tokens, standard tier. Estimates only, from https://developers.openai.com/api/docs/pricing (checked 2026-10-25)
+# USD per million tokens, standard tier. Estimates only, from https://developers.openai.com/api/docs/pricing (checked 2026-11-13)
 MODEL_PRICING = {
-    "gpt-6-astra": {"input": 10.00, "output": 50.00, "cache_read": 1.00},
-    "gpt-6.1-sol": {"input": 2.00,  "output": 10.00, "cache_read": 0.10},
-    "gpt-6-sol":   {"input": 2.00,  "output": 10.00, "cache_read": 0.20},
-    "gpt-6-luna":  {"input": 0.10,  "output": 0.50,  "cache_read": 0.01},
+    "gpt-6-astra":   {"input": 10.00, "output": 50.00, "cache_read": 1.00},
+    "gpt-6.1-sol":   {"input": 2.00,  "output": 10.00, "cache_read": 0.10},
+    "gpt-6-sol":     {"input": 2.00,  "output": 10.00, "cache_read": 0.20},
+    "gpt-6.1-terra": {"input": 1.00,  "output": 5.00,  "cache_read": 0.05},
+    "gpt-6-luna":    {"input": 0.10,  "output": 0.50,  "cache_read": 0.01},
 }
 
 # Every GPT-6 model charges more once the prompt goes over 272K tokens
 LONG_CONTEXT_THRESHOLD = 272_000
 LONG_CONTEXT_PRICING = {
-    "gpt-6-astra": {"input": 20.00, "output": 75.00, "cache_read": 2.00},
-    "gpt-6.1-sol": {"input": 4.00,  "output": 15.00, "cache_read": 0.20},
-    "gpt-6-sol":   {"input": 4.00,  "output": 15.00, "cache_read": 0.40},
-    "gpt-6-luna":  {"input": 0.20,  "output": 0.75,  "cache_read": 0.02},
+    "gpt-6-astra":   {"input": 20.00, "output": 75.00, "cache_read": 2.00},
+    "gpt-6.1-sol":   {"input": 4.00,  "output": 15.00, "cache_read": 0.20},
+    "gpt-6-sol":     {"input": 4.00,  "output": 15.00, "cache_read": 0.40},
+    "gpt-6.1-terra": {"input": 2.00,  "output": 7.50,  "cache_read": 0.10},
+    "gpt-6-luna":    {"input": 0.20,  "output": 0.75,  "cache_read": 0.02},
 }
 
 # The 30 minute cache rate. 12 hour writes cost 2x, but the usage doesn't say which TTL was used, so this assumes 30 minutes
