@@ -85,28 +85,35 @@ button, input, textarea { font: inherit; color: inherit; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; padding: 8px 18px; font-weight: 600; }
 .btn-primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn:disabled:hover { background: var(--surface); }
+.btn-primary:disabled:hover { background: var(--accent); border-color: var(--accent); }
 .btn-link { border: none; background: none; color: var(--accent-ink); padding: 2px 4px; cursor: pointer; font-size: 12px; }
+.btn-link:disabled { color: var(--text-muted); cursor: not-allowed; }
 
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
 
 .models-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 10px; }
 .models-count { font-size: 12px; color: var(--text-secondary); }
+.locked-note { font-size: 12px; color: var(--text-muted); margin: -4px 0 8px; }
 .provider { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 0; }
 .provider + .provider { border-top: 1px solid var(--border); }
 .provider-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); min-width: 76px; text-transform: capitalize; }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: pointer; font-size: 13px; background: var(--bg); }
 .chip input { margin: 0; accent-color: var(--accent); }
+.chip:has(input:disabled) { cursor: not-allowed; color: var(--text-muted); }
 
 .composer textarea {
   width: 100%; min-height: 110px; resize: vertical; border: 1px solid var(--border); border-radius: 10px;
   background: var(--bg); padding: 10px 12px; color: var(--text-primary);
 }
+.composer textarea:disabled { color: var(--text-muted); cursor: not-allowed; }
 .composer details { margin-top: 8px; font-size: 13px; color: var(--text-secondary); }
 .composer summary { cursor: pointer; width: fit-content; }
 .composer details textarea { min-height: 60px; margin-top: 6px; }
 .composer-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
 .composer-actions label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .composer-actions input { accent-color: var(--accent); margin: 0; }
+.composer-buttons { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .hint { font-size: 12px; color: var(--text-muted); }
 
 .notice { border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid var(--border); background: var(--surface); }
@@ -115,7 +122,10 @@ button, input, textarea { font: inherit; color: inherit; }
 
 .summary { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
 .summary strong { color: var(--text-primary); }
-.summary .prompt { display: block; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-id { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; color: var(--text-primary); font-size: 12px; }
+.session-tools { display: inline-flex; align-items: baseline; gap: 4px; }
+.session-tools a { color: var(--accent-ink); font-size: 12px; text-decoration: none; padding: 2px 4px; }
+.session-tools a:hover { text-decoration: underline; }
 
 .tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
 .tab {
@@ -136,14 +146,21 @@ button, input, textarea { font: inherit; color: inherit; }
 
 .tabpanel { background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px; padding: 16px; }
 .tabpanel[hidden] { display: none; }
+.turn + .turn { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.turn-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.turn-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.turn-cost { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.who { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.user-msg { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
 .response { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: inherit; line-height: 1.6; }
 .response.error { color: var(--critical); background: var(--critical-bg); padding: 10px 12px; border-radius: 8px; }
-.waiting { color: var(--text-muted); }
-.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.waiting { color: var(--text-muted); margin: 0; }
+.not-kept { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
 .meta-label { font-size: 12px; color: var(--text-secondary); }
 .meta-value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .meta-value.warn { color: var(--warning); }
-.panel-tools { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.reply-head { display: flex; justify-content: space-between; align-items: baseline; }
 </style>
 </head>
 <body>
@@ -164,6 +181,7 @@ button, input, textarea { font: inherit; color: inherit; }
         <button type="button" class="btn-link" data-select="none">Clear</button>
       </div>
     </div>
+    <p id="locked-note" class="locked-note" hidden>Models, system prompt and logging are fixed for this conversation. Press Clear conversation to change them.</p>
     <div id="models"><span class="hint">Loading models…</span></div>
   </section>
 
@@ -175,9 +193,10 @@ button, input, textarea { font: inherit; color: inherit; }
       <textarea id="system" placeholder="e.g. Answer in one sentence."></textarea>
     </details>
     <div class="composer-actions">
-      <label><input type="checkbox" id="log" checked> Log this run to <code>logs/eval_log.json</code></label>
-      <span>
-        <span class="hint">Ctrl+Enter to send · every model checked is a billed call</span>
+      <label><input type="checkbox" id="log" checked> Log each turn to <code>logs/eval_log.json</code></label>
+      <span class="composer-buttons">
+        <span class="hint">Ctrl+Enter to send · every model checked is a billed call · each turn resends the whole conversation, so input tokens (and cost) grow every turn</span>
+        <button type="button" id="clear" class="btn" disabled>Clear conversation</button>
         <button type="submit" id="send" class="btn btn-primary">Send</button>
       </span>
     </div>
@@ -185,7 +204,7 @@ button, input, textarea { font: inherit; color: inherit; }
 
   <section id="results" hidden>
     <div id="summary" class="summary" aria-live="polite"></div>
-    <div id="tabs" class="tabs" role="tablist" aria-label="Responses by model"></div>
+    <div id="tabs" class="tabs" role="tablist" aria-label="Conversations by model"></div>
     <div id="panels"></div>
   </section>
 </div>
@@ -198,6 +217,9 @@ const $ = (id) => document.getElementById(id);
 
 let allModels = [];
 let running = false;
+// The current conversation, or null before the first send and after Clear conversation.
+// Each model keeps its own history, so a follow-up sees that model's own earlier answers.
+let session = null;
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -212,11 +234,17 @@ function el(tag, attrs = {}, ...children) {
 
 function fmtCost(v) { return v == null ? "n/a" : "$" + v.toFixed(6); }
 function fmtInt(v) { return v == null ? "–" : Number(v).toLocaleString(); }
+function costOf(result) { return result && result.usage && result.usage.cost ? result.usage.cost.total_cost : null; }
 
 function showNotice(html) {
   const n = $("notice");
   n.innerHTML = html;
   n.hidden = !html;
+}
+
+function showError(text) {
+  $("notice").textContent = text;
+  $("notice").hidden = false;
 }
 
 // ---- Model picker ----
@@ -225,9 +253,20 @@ function checkedModels() {
   return [...document.querySelectorAll("#models input[data-model]:checked")].map((i) => i.dataset.model);
 }
 
-function updateCount() {
-  $("models-count").textContent = `${checkedModels().length} of ${allModels.length} selected`;
-  $("send").disabled = running || checkedModels().length === 0;
+function updateControls() {
+  $("models-count").textContent = session
+    ? `${session.models.length} in this conversation`
+    : `${checkedModels().length} of ${allModels.length} selected`;
+  $("send").disabled = running || (!session && checkedModels().length === 0);
+  $("clear").disabled = running || !session;
+}
+
+function setLocked(locked) {
+  // A model added mid-conversation would have no history, so the setup is fixed until Clear conversation
+  for (const node of document.querySelectorAll("#models input, button[data-select]")) node.disabled = locked;
+  $("system").disabled = locked;
+  $("log").disabled = locked;
+  $("locked-note").hidden = !locked;
 }
 
 function renderModels() {
@@ -252,18 +291,18 @@ function renderModels() {
     );
     root.append(row);
   }
-  updateCount();
+  updateControls();
 }
 
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-select]");
-  if (!btn) return;
+  if (!btn || session) return;
   const provider = btn.dataset.provider;
   const selector = provider ? `#models input[data-provider="${CSS.escape(provider)}"]` : "#models input[data-model]";
   for (const box of document.querySelectorAll(selector)) box.checked = btn.dataset.select === "all";
-  updateCount();
+  updateControls();
 });
-$("models").addEventListener("change", updateCount);
+$("models").addEventListener("change", updateControls);
 
 async function loadModels() {
   try {
@@ -279,9 +318,9 @@ async function loadModels() {
   }
 }
 
-// ---- Tabs ----
+// ---- Tabs: one per model, each holding that model's whole conversation ----
 
-const tabs = new Map(); // model -> { tab, panel, result }
+const tabs = new Map(); // model -> { tab, panel, current: { prompt, turnEl, replyEl, costEl, result } }
 
 function selectTab(model, focus = false) {
   for (const [m, t] of tabs) {
@@ -293,11 +332,16 @@ function selectTab(model, focus = false) {
   if (focus) tabs.get(model).tab.focus();
 }
 
+function selectedModel() {
+  for (const [m, t] of tabs) if (t.tab.getAttribute("aria-selected") === "true") return m;
+  return null;
+}
+
 $("tabs").addEventListener("keydown", (e) => {
   const keys = { ArrowRight: 1, ArrowLeft: -1 };
   if (!(e.key in keys) && e.key !== "Home" && e.key !== "End") return;
   const models = [...tabs.keys()];
-  const current = models.findIndex((m) => tabs.get(m).tab.getAttribute("aria-selected") === "true");
+  const current = models.indexOf(selectedModel());
   let next = e.key === "Home" ? 0 : e.key === "End" ? models.length - 1
     : (current + keys[e.key] + models.length) % models.length;
   selectTab(models[next], true);
@@ -313,33 +357,72 @@ function buildTabs(models) {
     const tab = el("button", {
       type: "button", class: "tab", role: "tab", id: `tab-${id}`, "aria-controls": `panel-${id}`,
     }, el("span", { class: "status wait", "aria-label": "Running" }), model, el("span", { class: "cost" }));
-    const panel = el("div", { class: "tabpanel", role: "tabpanel", id: `panel-${id}`, "aria-labelledby": `tab-${id}` },
-      el("p", { class: "waiting", text: `Waiting for ${model}…` }));
+    const panel = el("div", { class: "tabpanel", role: "tabpanel", id: `panel-${id}`, "aria-labelledby": `tab-${id}` });
     tab.addEventListener("click", () => selectTab(model));
     $("tabs").append(tab);
     $("panels").append(panel);
-    tabs.set(model, { tab, panel, result: null });
+    tabs.set(model, { tab, panel, current: null });
   });
   selectTab(models[0]);
+}
+
+function setStatus(t, kind, label, symbol) {
+  const status = t.tab.querySelector(".status");
+  status.className = "status " + kind;
+  status.textContent = symbol;
+  status.setAttribute("aria-label", label);
+}
+
+function startTurn(turn, prompt) {
+  for (const [model, t] of tabs) {
+    const costEl = el("span", { class: "turn-cost" });
+    const replyEl = el("div", {}, el("p", { class: "waiting", text: `Waiting for ${model}…` }));
+    const turnEl = el("div", { class: "turn" },
+      el("div", { class: "turn-head" }, el("span", { class: "turn-label", text: `Turn ${turn}` }), costEl),
+      el("div", { class: "user-msg" }, el("div", { class: "who", text: "You" }), el("pre", { class: "response", text: prompt })),
+      replyEl,
+    );
+    t.panel.append(turnEl);
+    const status = t.tab.querySelector(".status");
+    const before = [status.className, status.getAttribute("aria-label"), status.textContent];
+    t.current = { prompt, turnEl, replyEl, costEl, result: null, before, previous: t.current };
+    setStatus(t, "wait", "Running", "");
+  }
+  const shown = tabs.get(selectedModel());
+  if (shown) shown.current.turnEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
 function metaItem(label, value, cls = "") {
   return el("div", {}, el("div", { class: "meta-label", text: label }), el("div", { class: "meta-value " + cls, text: value }));
 }
 
-function fillTab(result) {
+function fillTurn(result) {
   const t = tabs.get(result.model);
-  if (!t) return;
-  t.result = result;
+  if (!t || !t.current || t.current.result) return;
+  const turn = t.current;
+  turn.result = result;
   const usage = result.usage;
-  const cost = usage && usage.cost ? usage.cost.total_cost : null;
+  const cost = costOf(result);
   const unusualStop = !result.error && !NORMAL_STOPS.has(result.stop_reason);
 
-  const status = t.tab.querySelector(".status");
-  status.className = "status " + (result.error ? "err" : unusualStop ? "warn" : "ok");
-  status.textContent = result.error ? "✕" : unusualStop ? "!" : "✓";
-  status.setAttribute("aria-label", result.error ? "Failed" : unusualStop ? `Stopped: ${result.stop_reason}` : "Done");
-  t.tab.querySelector(".cost").textContent = result.error ? "" : fmtCost(cost);
+  // Only a successful, non-empty reply joins the history, so it keeps alternating user and assistant turns
+  const kept = !result.error && !!(result.response && result.response.trim());
+  if (kept) {
+    session.histories[result.model].push(
+      { role: "user", content: turn.prompt },
+      { role: "assistant", content: result.response },
+    );
+  }
+  if (cost != null) {
+    session.modelCosts[result.model] += cost;
+    session.total += cost;
+  }
+
+  if (result.error) setStatus(t, "err", "Failed", "✕");
+  else if (unusualStop) setStatus(t, "warn", `Stopped: ${result.stop_reason}`, "!");
+  else setStatus(t, "ok", "Done", "✓");
+  t.tab.querySelector(".cost").textContent = fmtCost(session.modelCosts[result.model]);
+  turn.costEl.textContent = result.error ? "" : fmtCost(cost);
 
   const copy = el("button", { type: "button", class: "btn-link", text: "Copy response" });
   copy.addEventListener("click", async () => {
@@ -352,8 +435,11 @@ function fillTab(result) {
   if (result.error) {
     children.push(el("pre", { class: "response error", text: result.error }));
   } else {
-    children.push(el("div", { class: "panel-tools" }, copy));
+    children.push(el("div", { class: "reply-head" }, el("div", { class: "who", text: result.model }), copy));
     children.push(el("pre", { class: "response", text: result.response || "(empty response)" }));
+  }
+  if (!kept) {
+    children.push(el("p", { class: "not-kept", text: "This turn isn't part of the conversation sent on the next turn." }));
   }
   const meta = el("div", { class: "meta" },
     metaItem("Provider", result.provider || "?"),
@@ -368,54 +454,133 @@ function fillTab(result) {
     meta.append(
       metaItem("Cache read", fmtInt(usage.cache_read_input_tokens)),
       metaItem("Cache write", fmtInt(usage.cache_creation_input_tokens)),
-      metaItem("Estimated cost", fmtCost(cost)),
+      metaItem("Call cost", fmtCost(cost)),
+      metaItem("Model's session cost", fmtCost(session.modelCosts[result.model])),
     );
   }
   children.push(meta);
-  t.panel.replaceChildren(...children);
+  turn.replyEl.replaceChildren(...children);
 }
 
-function updateSummary(prompt, doneMsg) {
-  const results = [...tabs.values()].map((t) => t.result).filter(Boolean);
+function sessionTools() {
+  const id = session.id;
+  const copy = el("button", { type: "button", class: "btn-link", text: "Copy" });
+  copy.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(id); copy.textContent = "Copied"; }
+    catch { copy.textContent = "Copy failed"; }
+    setTimeout(() => { copy.textContent = "Copy"; }, 1500);
+  });
+  const tools = el("span", { class: "session-tools" }, copy);
+  // Only a logged conversation can be found in the log viewer
+  if (session.log) {
+    tools.append(el("a", { href: "/?session=" + encodeURIComponent(id), target: "_blank", rel: "noopener", text: "View in log" }));
+  } else {
+    tools.append(el("span", { class: "hint", text: "not logged" }));
+  }
+  return tools;
+}
+
+function updateSummary(doneMsg) {
+  const results = [...tabs.values()].map((t) => t.current && t.current.result).filter(Boolean);
   const ok = results.filter((r) => !r.error).length;
   const failed = results.length - ok;
-  const total = results.reduce((s, r) => s + (r.usage && r.usage.cost ? r.usage.cost.total_cost : 0), 0);
-  const summary = $("summary");
-  summary.replaceChildren();
   const pending = tabs.size - results.length;
-  summary.append(
-    el("strong", { text: `${ok} of ${tabs.size} succeeded` }),
+  const turnTotal = results.reduce((s, r) => s + (costOf(r) || 0), 0);
+  const summary = $("summary");
+  summary.replaceChildren(
+    "Session ", el("code", { class: "session-id", text: session.id }), " ", sessionTools(),
+    " · ", el("strong", { text: `Turn ${session.turn}` }),
+    ` · ${ok} of ${tabs.size} succeeded`,
     failed ? ` · ${failed} failed` : "",
     pending ? ` · ${pending} running` : "",
-    " · total ", el("strong", { class: "num", text: fmtCost(total) }),
+    " · this turn ", el("strong", { class: "num", text: fmtCost(turnTotal) }),
+    " · session ", el("strong", { class: "num", text: fmtCost(session.total) }),
   );
   if (doneMsg) summary.append(" · " + doneMsg);
-  summary.append(el("span", { class: "prompt", text: "Prompt: " + prompt, title: prompt }));
 }
 
-// ---- Sending ----
+// ---- Conversation ----
+
+function newSession() {
+  const models = checkedModels();
+  session = {
+    // Short enough to read and type into the log viewer's filter; each turn's log entry carries it
+    id: crypto.randomUUID().replace(/-/g, "").slice(0, 8),
+    turn: 0,
+    models,
+    system: $("system").value,
+    log: $("log").checked,
+    histories: Object.fromEntries(models.map((m) => [m, []])),
+    modelCosts: Object.fromEntries(models.map((m) => [m, 0])),
+    total: 0,
+  };
+  setLocked(true);
+  buildTabs(models);
+  $("results").hidden = false;
+}
+
+function clearSession(keepNotice = false) {
+  session = null;
+  tabs.clear();
+  $("tabs").replaceChildren();
+  $("panels").replaceChildren();
+  $("summary").replaceChildren();
+  $("results").hidden = true;
+  setLocked(false);
+  if (!keepNotice) showNotice("");
+  updateControls();
+  $("prompt").focus();
+}
+
+$("clear").addEventListener("click", () => { if (!running) clearSession(); });
+
+function undoTurn(prompt) {
+  // The server refused or never answered, so nothing was billed: take the turn back and restore the prompt
+  for (const t of tabs.values()) {
+    if (!t.current) continue;
+    const status = t.tab.querySelector(".status");
+    [status.className, , status.textContent] = t.current.before;
+    status.setAttribute("aria-label", t.current.before[1]);
+    t.current.turnEl.remove();
+    t.current = t.current.previous;
+  }
+  session.turn -= 1;
+  $("prompt").value = prompt;
+  if (session.turn === 0) clearSession(true);
+}
 
 async function send() {
   const prompt = $("prompt").value;
-  const models = checkedModels();
-  if (running || !prompt.trim() || models.length === 0) return;
+  if (running || !prompt.trim() || (!session && checkedModels().length === 0)) return;
 
   running = true;
-  updateCount();
   showNotice("");
+  if (!session) newSession();
+  session.turn += 1;
+  updateControls();
   $("send").textContent = "Running…";
-  $("results").hidden = false;
-  buildTabs(models);
-  updateSummary(prompt);
+  $("prompt").value = "";
+  startTurn(session.turn, prompt);
+  updateSummary();
 
   let doneMsg = "";
+  // True until the server accepts the request: only then can the turn be taken back, as nothing was billed
+  let notStarted = true;
   try {
     const res = await fetch("/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, system: $("system").value, models, log: $("log").checked }),
+      body: JSON.stringify({
+        prompt,
+        system: session.system,
+        models: session.models,
+        log: session.log,
+        session_id: session.id,
+        histories: session.histories,
+      }),
     });
     if (!res.ok) throw new Error(`The server refused the request (HTTP ${res.status})`);
+    notStarted = false;
 
     // One JSON object per line, sent as each model finishes
     const reader = res.body.getReader();
@@ -431,32 +596,35 @@ async function send() {
         if (!line) continue;
         const msg = JSON.parse(line);
         if (msg.type === "result") {
-          fillTab(msg.result);
-          updateSummary(prompt);
+          fillTurn(msg.result);
+          updateSummary();
         } else if (msg.type === "done") {
           doneMsg = msg.logged ? "logged" : msg.log_error ? "not logged: " + msg.log_error : "not logged";
+          // The logged running total, from every logged turn of this session
+          if (typeof msg.session_total_cost === "number") session.total = msg.session_total_cost;
         }
       }
       if (done) break;
     }
   } catch (err) {
-    showNotice("");
-    $("notice").textContent = String(err.message || err);
-    $("notice").hidden = false;
+    showError(String(err.message || err));
   } finally {
-    // Any tab still waiting never got a result, e.g. because the server stopped
-    for (const [model, t] of tabs) {
-      if (!t.result) {
-        const status = t.tab.querySelector(".status");
-        status.className = "status err";
-        status.textContent = "✕";
-        t.panel.replaceChildren(el("p", { class: "response error", text: `No result received for ${model}.` }));
+    if (notStarted) {
+      undoTurn(prompt);
+    } else {
+      // Any tab still waiting never got a result, e.g. because the server stopped
+      for (const [model, t] of tabs) {
+        if (t.current && !t.current.result) {
+          t.current.result = { model, error: "No result received.", usage: null };
+          setStatus(t, "err", "Failed", "✕");
+          t.current.replyEl.replaceChildren(el("p", { class: "response error", text: `No result received for ${model}.` }));
+        }
       }
     }
-    updateSummary(prompt, doneMsg);
     running = false;
     $("send").textContent = "Send";
-    updateCount();
+    if (session) updateSummary(doneMsg);
+    updateControls();
   }
 }
 

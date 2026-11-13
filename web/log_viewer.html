@@ -94,6 +94,11 @@ button, input, select { font: inherit; color: inherit; }
   color: var(--text-primary); font-size: 14px;
 }
 .field-search { flex: 1 1 220px; }
+.field-session select { max-width: min(360px, 100%); }
+.session-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--text-secondary); margin: 0 0 8px; }
+.session-line code { font-size: 12px; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; color: var(--text-primary); }
+.session-line .btn-link { padding: 0; font-size: 12px; }
+.session-line .btn-link:hover { text-decoration: underline; }
 .models-filter { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: pointer; color: var(--text-primary); font-size: 13px; background: var(--bg); }
 .chip input { margin: 0; accent-color: var(--accent); }
@@ -216,6 +221,11 @@ tbody tr:last-child td { border-bottom: none; }
           <option value="chat">Chat page (chat_ui)</option>
         </select>
       </label>
+      <label class="field field-session">Chat session
+        <select id="f-session">
+          <option value="all">All</option>
+        </select>
+      </label>
       <label class="field">Provider
         <select id="f-provider">
           <option value="all">All</option>
@@ -326,7 +336,7 @@ const state = {
   modelProvider: new Map(),
   source: "",
   excludedModels: new Set(),
-  filters: { text: "", type: "all", provider: "all", status: "all", from: "", to: "" },
+  filters: { text: "", type: "all", session: "all", provider: "all", status: "all", from: "", to: "" },
   modelSort: { key: null, dir: 1 },
   runSort: "newest",
   expanded: new Set(),
@@ -427,6 +437,10 @@ function loadEntries(data, source) {
         timestamp: str(e.timestamp, ""),
         date: date && !isNaN(date) ? date : null,
         type: str(e.type, "unknown"),
+        // A chat page conversation: every turn of one conversation shares its session_id
+        sessionId: str(e.session_id, null),
+        turn: num(e.turn),
+        sessionTotal: num(e.session_total_cost),
         prompt: promptText(e.prompt),
         system: systemText(e.system),
         model,
@@ -448,6 +462,7 @@ function loadEntries(data, source) {
 
   hideNotice();
   if (!data.length) showNotice("The log is empty. Run evaluate(...) or evaluate_all_models(...) with log=True, then press Reload.");
+  renderSessionFilter();
   renderProviderFilter();
   renderModelFilter();
   render();
@@ -500,6 +515,7 @@ function filteredRows() {
   return state.rows.filter((r) => {
     if (state.excludedModels.has(r.model)) return false;
     if (f.type !== "all" && r.type !== f.type) return false;
+    if (f.session !== "all" && r.sessionId !== f.session) return false;
     if (f.provider !== "all" && r.provider !== f.provider) return false;
     if (f.status === "ok" && r.error) return false;
     if (f.status === "error" && !r.error) return false;
@@ -509,9 +525,57 @@ function filteredRows() {
       if (f.from && d < f.from) return false;
       if (f.to && d > f.to) return false;
     }
-    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider].some((t) => t.toLowerCase().includes(q))) return false;
+    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || ""].some((t) => t.toLowerCase().includes(q))) return false;
     return true;
   });
+}
+
+// One option per chat session in the log, newest first, labelled with its id, start time, turns and first prompt
+function renderSessionFilter() {
+  const sessions = new Map();
+  state.entries.forEach((e, runId) => {
+    const id = e && str(e.session_id, null);
+    if (id == null) return;
+    if (!sessions.has(id)) {
+      const d = e.timestamp ? new Date(e.timestamp) : null;
+      sessions.set(id, { id, runId, date: d && !isNaN(d) ? d : null, timestamp: str(e.timestamp, ""), prompt: promptText(e.prompt), turns: 0 });
+    }
+    sessions.get(id).turns += 1;
+  });
+  const list = [...sessions.values()].sort((a, b) =>
+    (b.date ? b.date.getTime() : b.runId) - (a.date ? a.date.getTime() : a.runId) || b.runId - a.runId);
+
+  const wanted = state.filters.session;
+  if (wanted !== "all" && !sessions.has(wanted)) {
+    showNotice(`Chat session ${wanted} isn't in this log, so all runs are shown.`);
+    state.filters.session = "all";
+    syncSessionUrl();
+  }
+  const short = (t) => { const one = t.replace(/\s+/g, " ").trim(); return one.length > 40 ? one.slice(0, 39) + "…" : one; };
+  const select = $("#f-session");
+  select.replaceChildren(
+    h("option", { value: "all" }, sessions.size ? "All" : "All (no chat sessions logged)"),
+    ...list.map((s) => h("option", { value: s.id, title: s.prompt },
+      `${s.id} · ${fmtDate(s.date, s.timestamp)} · ${plural(s.turns, "turn")}${s.prompt ? " · " + short(s.prompt) : ""}`)),
+  );
+  select.value = state.filters.session;
+}
+
+// Keeps ?session=<id> in the address bar, so a filtered view can be bookmarked or opened from the chat page
+function syncSessionUrl() {
+  if (!location.protocol.startsWith("http")) return;
+  const url = new URL(location.href);
+  if (state.filters.session === "all") url.searchParams.delete("session");
+  else url.searchParams.set("session", state.filters.session);
+  history.replaceState(null, "", url);
+}
+
+function setSessionFilter(id) {
+  state.filters.session = id;
+  state.runLimit = 50;
+  $("#f-session").value = id;
+  syncSessionUrl();
+  render();
 }
 
 const PROVIDER_LABELS = { anthropic: "Anthropic", openai: "OpenAI" };
@@ -836,8 +900,17 @@ function runCard(run) {
     h("span", { class: "run-cost" }, hasCost ? fmtCost(run.cost) : "—"),
   );
 
-  const body = h("div", { class: "run-body" },
-    h("p", { class: open ? "prompt" : "prompt clamp" }, first.prompt || "(no prompt)"));
+  const body = h("div", { class: "run-body" });
+  if (first.sessionId != null) {
+    // Outside the head button, as a button can't hold another one
+    const filtered = state.filters.session === first.sessionId;
+    body.append(h("div", { class: "session-line" },
+      h("span", {}, "Session ", h("code", {}, first.sessionId), first.turn != null ? ` · turn ${first.turn}` : ""),
+      first.sessionTotal != null ? h("span", {}, `session total so far ${fmtCost(first.sessionTotal)}`) : null,
+      filtered ? null : h("button", { class: "btn-link", type: "button", onclick: () => setSessionFilter(first.sessionId) }, "Show only this session"),
+    ));
+  }
+  body.append(h("p", { class: open ? "prompt" : "prompt clamp" }, first.prompt || "(no prompt)"));
   if (open) {
     if (first.system) body.append(h("div", { class: "label-sm" }, "System prompt"), h("p", { class: "prompt" }, first.system));
     const single = rows.length === 1;
@@ -882,6 +955,9 @@ function resultView(r, single) {
 const CSV_COLUMNS = [
   ["timestamp", (r) => r.timestamp],
   ["type", (r) => r.type],
+  ["session_id", (r) => r.sessionId],
+  ["turn", (r) => r.turn],
+  ["session_total_cost", (r) => r.sessionTotal],
   ["prompt", (r) => r.prompt],
   ["system", (r) => r.system],
   ["model", (r) => r.model],
@@ -964,6 +1040,7 @@ function bindFilter(id, key, event) {
 }
 bindFilter("#f-text", "text", "input");
 bindFilter("#f-type", "type", "change");
+$("#f-session").addEventListener("change", (e) => setSessionFilter(e.target.value));
 $("#f-provider").addEventListener("change", (e) => {
   state.filters.provider = e.target.value;
   state.runLimit = 50;
@@ -975,10 +1052,12 @@ bindFilter("#f-from", "from", "change");
 bindFilter("#f-to", "to", "change");
 
 $("#f-clear").addEventListener("click", () => {
-  state.filters = { text: "", type: "all", provider: "all", status: "all", from: "", to: "" };
+  state.filters = { text: "", type: "all", session: "all", provider: "all", status: "all", from: "", to: "" };
   state.excludedModels.clear();
   $("#f-text").value = "";
   $("#f-type").value = "all";
+  $("#f-session").value = "all";
+  syncSessionUrl();
   $("#f-provider").value = "all";
   $("#f-status").value = "all";
   $("#f-from").value = "";
@@ -1023,6 +1102,9 @@ new ResizeObserver((entries) => {
 }).observe($("#charts"));
 
 initTheme();
+// ?session=<id> opens the viewer on one chat conversation (the chat page links here)
+const sessionParam = new URLSearchParams(location.search).get("session");
+if (sessionParam) state.filters.session = sessionParam;
 loadFromServer();
 </script>
 </body>

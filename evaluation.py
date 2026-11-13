@@ -75,27 +75,39 @@ def _run_model_safe(model, messages, system=None):
             "error": f"{type(e).__name__}: {e}",
         }
 
-def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE):
+def _read_log(log_file):
+    if not os.path.exists(log_file):
+        return []
+    with open(log_file, encoding="utf-8") as f:
+        content = f.read().strip()
+    if not content:
+        return []
+    entries = json.loads(content)
+    if not isinstance(entries, list):
+        raise ValueError(f"{log_file} is not a JSON list of log entries")
+    return entries
+
+def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=None):
     # The log file is one JSON array of runs, newest last, so a webpage can load it with a single JSON.parse
+    entries = _read_log(log_file)
+    total_cost = sum(r["usage"]["cost"]["total_cost"] for r in results if r["usage"] and r["usage"]["cost"])
+
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "type": kind,
         "prompt": prompt,
         "system": system,
-        "total_cost": sum(
-            r["usage"]["cost"]["total_cost"] for r in results if r["usage"] and r["usage"]["cost"]
-        ),
-        "results": results,
+        "total_cost": total_cost,
     }
-
-    entries = []
-    if os.path.exists(log_file):
-        with open(log_file, encoding="utf-8") as f:
-            content = f.read().strip()
-        if content:
-            entries = json.loads(content)
-            if not isinstance(entries, list):
-                raise ValueError(f"{log_file} is not a JSON list of log entries")
+    if session_id is not None:
+        # One entry per turn of a multi-turn chat; the session's running total comes from its earlier logged turns
+        earlier = [e for e in entries if isinstance(e, dict) and e.get("session_id") == session_id]
+        entry["session_id"] = session_id
+        entry["turn"] = len(earlier) + 1
+        entry["session_total_cost"] = total_cost + sum(
+            e["total_cost"] for e in earlier if isinstance(e.get("total_cost"), (int, float))
+        )
+    entry["results"] = results
 
     entries.append(entry)
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -191,10 +203,21 @@ def evaluate_all_models(prompt, models=None, providers=None, system=None, respon
 
     return results
 
+def _check_history(history):
+    # A chat history from the page: text turns alternating user then assistant, ending with an assistant reply
+    if not isinstance(history, list) or len(history) % 2:
+        raise ValueError("each history must be a list of user/assistant pairs")
+    for i, message in enumerate(history):
+        if (not isinstance(message, dict) or set(message) != {"role", "content"}
+                or message["role"] != ("user" if i % 2 == 0 else "assistant")
+                or not isinstance(message["content"], str) or not message["content"].strip()):
+            raise ValueError("history messages must alternate user and assistant, with non-empty text")
+
 class _LogViewerHandler(BaseHTTPRequestHandler):
     # Serves only the pages, the log and the model list - never the project folder, which holds .env
     log_file = LOG_FILE
-    max_body_bytes = 1_000_000
+    # A multi-turn chat resends every model's whole conversation, so this allows for long ones
+    max_body_bytes = 8_000_000
 
     def do_GET(self):
         path = self.path.split("?")[0]
@@ -240,6 +263,15 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
                     or not isinstance(models, list) or not models
                     or any(m not in allowed for m in models)):
                 raise ValueError("expected a prompt and a list of priced models")
+            # Optional, for a multi-turn chat: the session's id and each model's own conversation so far
+            session_id = body.get("session_id")
+            histories = body.get("histories") or {}
+            if not (session_id is None or (isinstance(session_id, str) and 0 < len(session_id) <= 100)):
+                raise ValueError("session_id must be a short string")
+            if not isinstance(histories, dict) or any(m not in models for m in histories):
+                raise ValueError("histories must map requested models to their messages")
+            for history in histories.values():
+                _check_history(history)
         except (ValueError, KeyError, TypeError) as e:
             self.send_error(400, str(e))
             return
@@ -255,7 +287,8 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
         client_gone = False
         with ThreadPoolExecutor(max_workers=min(len(models), 16)) as pool:
             futures = [
-                pool.submit(_run_model_safe, m, [{"role": "user", "content": prompt}], system) for m in models
+                pool.submit(_run_model_safe, m, histories.get(m, []) + [{"role": "user", "content": prompt}], system)
+                for m in models
             ]
             for future in as_completed(futures):
                 result = future.result()
@@ -274,8 +307,12 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
         if body.get("log", True):
             try:
                 with _log_lock:
-                    log_evaluation("chat", prompt, system, [results[m] for m in models], log_file=self.log_file)
+                    entry = log_evaluation("chat", prompt, system, [results[m] for m in models],
+                                           log_file=self.log_file, session_id=session_id)
                 done["logged"] = True
+                if session_id is not None:
+                    done["turn"] = entry["turn"]
+                    done["session_total_cost"] = entry["session_total_cost"]
             except (OSError, ValueError) as e:
                 done["log_error"] = f"{type(e).__name__}: {e}"
         if not client_gone:
