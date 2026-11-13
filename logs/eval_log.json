@@ -1383,5 +1383,305 @@
         "error": null
       }
     ]
+  },
+  {
+    "timestamp": "2026-11-13T22:10:47.234395+00:00",
+    "type": "chat",
+    "prompt": "say hello again\n",
+    "system": null,
+    "total_cost": 0.0044557,
+    "results": [
+      {
+        "model": "claude-fable-5-1",
+        "provider": "anthropic",
+        "seconds": 4.6722363000008045,
+        "stop_reason": "end_turn",
+        "response": "Hello again! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 18,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 30,
+          "cost": {
+            "input_cost": 0.00012,
+            "output_cost": 0.0009,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00102
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5-5",
+        "provider": "anthropic",
+        "seconds": 4.945190799997363,
+        "stop_reason": "end_turn",
+        "response": "Hello again! 👋 What can I help you with?",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 59,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 71,
+          "cost": {
+            "input_cost": 4.8e-05,
+            "output_cost": 0.00118,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0012280000000000001
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-opus-5",
+        "provider": "anthropic",
+        "seconds": 4.902573999999731,
+        "stop_reason": "end_turn",
+        "response": "Hello again! 👋\n\nWhat can I help you with today?",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 19,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 29,
+          "cost": {
+            "input_cost": 5e-05,
+            "output_cost": 0.000475,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.000525
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "provider": "anthropic",
+        "seconds": 4.955813599997782,
+        "stop_reason": "end_turn",
+        "response": "Hello again! 👋 It's nice to hear from you. How can I help you today?",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 28,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 40,
+          "cost": {
+            "input_cost": 2.4e-05,
+            "output_cost": 0.00028,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00030399999999999996
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-5",
+        "provider": "anthropic",
+        "seconds": 5.73286250000092,
+        "stop_reason": "end_turn",
+        "response": "Hello again! 👋 How can I help you today?",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 18,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 28,
+          "cost": {
+            "input_cost": 2e-05,
+            "output_cost": 0.00018,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.0002
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "seconds": 4.158673700003419,
+        "stop_reason": "end_turn",
+        "response": "Hello! 😊 How are you doing? Is there something I can help you with today?",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 24,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 34,
+          "cost": {
+            "input_cost": 3e-05,
+            "output_cost": 0.00036,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00039000000000000005
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 4.152220099997066,
+        "stop_reason": "end_turn",
+        "response": "Hello again! It's nice to hear from you. How can I help you today?",
+        "usage": {
+          "input_tokens": 12,
+          "output_tokens": 24,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 36,
+          "cost": {
+            "input_cost": 1.2000000000000002e-06,
+            "output_cost": 1.2e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 1.32e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "provider": "anthropic",
+        "seconds": 4.400791699998081,
+        "stop_reason": "end_turn",
+        "response": "Hello again! 👋\n\nHow can I help you?",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 16,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 26,
+          "cost": {
+            "input_cost": 1e-05,
+            "output_cost": 8e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 9e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-astra",
+        "provider": "openai",
+        "seconds": 8.325603999997838,
+        "stop_reason": "completed",
+        "response": "Hello again!",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 7,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 17,
+          "cost": {
+            "input_cost": 0.0001,
+            "output_cost": 0.00035,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 0.00045
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "provider": "openai",
+        "seconds": 8.31861320000462,
+        "stop_reason": "completed",
+        "response": "Hello again!",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 7,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 17,
+          "cost": {
+            "input_cost": 2e-05,
+            "output_cost": 7e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 8.999999999999999e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-sol",
+        "provider": "openai",
+        "seconds": 8.281263000004401,
+        "stop_reason": "completed",
+        "response": "Hello again!",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 7,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 17,
+          "cost": {
+            "input_cost": 2e-05,
+            "output_cost": 7e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 8.999999999999999e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6.1-terra",
+        "provider": "openai",
+        "seconds": 8.224354199999652,
+        "stop_reason": "completed",
+        "response": "Hello again!",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 7,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 17,
+          "cost": {
+            "input_cost": 1e-05,
+            "output_cost": 3.5e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 4.4999999999999996e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 8.211714199998823,
+        "stop_reason": "completed",
+        "response": "Hello again!",
+        "usage": {
+          "input_tokens": 10,
+          "output_tokens": 19,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 10,
+          "total_tokens": 29,
+          "cost": {
+            "input_cost": 1e-06,
+            "output_cost": 9.5e-06,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 1.0500000000000001e-05
+          }
+        },
+        "error": null
+      }
+    ]
   }
 ]
