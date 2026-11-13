@@ -178,6 +178,21 @@ tbody tr:last-child td { border-bottom: none; }
 .error-box { border-radius: 8px; padding: 8px 10px; background: var(--critical-bg); color: var(--critical); overflow-wrap: anywhere; }
 .empty { color: var(--text-secondary); padding: 8px 0; }
 
+/* Explanations: any element with data-tip shows it on hover or focus; .info is a focusable ⓘ for headings */
+.tip-bubble {
+  position: fixed; z-index: 30; display: none; pointer-events: none; max-width: 280px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  font-size: 12px; line-height: 1.45; color: var(--text-primary); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.info {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; padding: 0; vertical-align: 1px;
+  border: 1px solid var(--border); border-radius: 50%; background: none; color: var(--text-muted);
+  font: italic 600 11px/1 Georgia, serif; cursor: help;
+}
+.info:hover, .info:focus-visible { color: var(--accent-ink); border-color: var(--accent); }
+.title-row { display: flex; align-items: center; }
+.tile-label[data-tip], .chart figcaption[data-tip] { cursor: help; }
+
 .drop-overlay {
   position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center;
   background: rgba(42, 120, 214, 0.15); border: 3px dashed var(--accent); font-size: 18px; font-weight: 600;
@@ -198,11 +213,11 @@ tbody tr:last-child td { border-bottom: none; }
       <div class="source" id="source">No log loaded</div>
     </div>
     <div class="actions">
-      <button class="btn" id="reload" type="button">Reload</button>
-      <button class="btn" id="open" type="button">Open log file</button>
+      <button class="btn" id="reload" type="button" data-tip="Load logs/eval_log.json again from the server, to pick up runs logged since this page opened.">Reload</button>
+      <button class="btn" id="open" type="button" data-tip="Open a log file from your computer instead. You can also drag a log file onto the page.">Open log file</button>
       <input type="file" id="file-input" accept=".json,application/json" hidden>
-      <button class="btn btn-primary" id="export" type="button">Export CSV</button>
-      <button class="btn" id="theme" type="button"></button>
+      <button class="btn btn-primary" id="export" type="button" data-tip="Download the model calls that match the current filters as a CSV file, one row per call.">Export CSV</button>
+      <button class="btn" id="theme" type="button" data-tip="Switch between light and dark mode. The choice is remembered in this browser."></button>
     </div>
   </div>
 
@@ -210,10 +225,10 @@ tbody tr:last-child td { border-bottom: none; }
 
   <section class="panel" aria-label="Filters">
     <div class="filters">
-      <label class="field field-search">Search prompts and responses
+      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider or chat session id contains this text. Not case-sensitive.">Search prompts and responses
         <input type="search" id="f-text" placeholder="e.g. quantum">
       </label>
-      <label class="field">Run type
+      <label class="field" data-tip="Where the run came from: evaluate() for one model, evaluate_all_models() for a comparison, or a turn sent from the chat page.">Run type
         <select id="f-type">
           <option value="all">All</option>
           <option value="evaluate">Single model (evaluate)</option>
@@ -221,30 +236,30 @@ tbody tr:last-child td { border-bottom: none; }
           <option value="chat">Chat page (chat_ui)</option>
         </select>
       </label>
-      <label class="field field-session">Chat session
+      <label class="field field-session" data-tip="Show only the turns of one chat page conversation. Each conversation has its own session id, shown on the chat page.">Chat session
         <select id="f-session">
           <option value="all">All</option>
         </select>
       </label>
-      <label class="field">Provider
+      <label class="field" data-tip="Show only one provider's models. The model checkboxes below then list just that provider's models.">Provider
         <select id="f-provider">
           <option value="all">All</option>
         </select>
       </label>
-      <label class="field">Status
+      <label class="field" data-tip="Show only calls that succeeded, or only calls that failed with an error.">Status
         <select id="f-status">
           <option value="all">All</option>
           <option value="ok">Succeeded</option>
           <option value="error">Errors</option>
         </select>
       </label>
-      <label class="field">From
+      <label class="field" data-tip="Show only runs on or after this day, in your local time.">From
         <input type="date" id="f-from">
       </label>
-      <label class="field">To
+      <label class="field" data-tip="Show only runs on or before this day, in your local time.">To
         <input type="date" id="f-to">
       </label>
-      <button class="btn" id="f-clear" type="button">Clear filters</button>
+      <button class="btn" id="f-clear" type="button" data-tip="Reset every filter, including the model checkboxes, so the whole log is shown.">Clear filters</button>
       <div class="models-filter" id="f-models"></div>
     </div>
   </section>
@@ -252,15 +267,18 @@ tbody tr:last-child td { border-bottom: none; }
   <div class="tiles" id="tiles"></div>
 
   <section class="panel">
-    <h2>Models</h2>
+    <h2 class="title-row">Models<button type="button" class="info" aria-label="About the Models section" data-tip="One row per model, totalled over the calls that match the filters. Averages leave out failed calls and calls with no cost estimate. Click a column heading to sort by it. The charts compare the same averages.">i</button></h2>
     <div class="table-wrap" id="model-table"></div>
     <div class="charts" id="charts"></div>
   </section>
 
   <section class="panel">
     <div class="runs-head">
-      <h2 id="runs-title">Runs</h2>
-      <label class="field">Sort
+      <div class="title-row">
+        <h2 id="runs-title">Runs</h2>
+        <button type="button" class="info" aria-label="About the Runs section" data-tip="One card per logged run: an evaluate() call, an evaluate_all_models() comparison or one chat page turn. Click a card to see the full prompt and every model's response, tokens and cost. Only the calls that match the filters are shown.">i</button>
+      </div>
+      <label class="field" data-tip="Order the run cards by time, or by what each run cost in total.">Sort
         <select id="run-sort">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
@@ -604,7 +622,7 @@ function renderModelFilter() {
   const models = visibleModels();
   if (!models.length) return;
   box.append(
-    h("span", {}, "Models:"),
+    h("span", { "data-tip": "Untick a model to leave its calls out of the tiles, table, charts, runs and CSV export.", style: "cursor: help" }, "Models:"),
     ...models.map((m) =>
       h("label", { class: "chip" },
         h("input", {
@@ -618,8 +636,8 @@ function renderModelFilter() {
         }),
         m)
     ),
-    h("button", { class: "btn-link", type: "button", onclick: () => { models.forEach((m) => state.excludedModels.delete(m)); renderModelFilter(); render(); } }, "All"),
-    h("button", { class: "btn-link", type: "button", onclick: () => { models.forEach((m) => state.excludedModels.add(m)); renderModelFilter(); render(); } }, "None"),
+    h("button", { class: "btn-link", type: "button", "data-tip": "Tick every model listed here.", onclick: () => { models.forEach((m) => state.excludedModels.delete(m)); renderModelFilter(); render(); } }, "All"),
+    h("button", { class: "btn-link", type: "button", "data-tip": "Untick every model listed here.", onclick: () => { models.forEach((m) => state.excludedModels.add(m)); renderModelFilter(); render(); } }, "None"),
   );
 }
 
@@ -669,26 +687,27 @@ function renderTiles(rows, runCount) {
   const costs = rows.map((r) => r.totalCost).filter((v) => v != null);
   const spend = costs.reduce((a, b) => a + b, 0);
   const errors = rows.filter((r) => r.error).length;
-  const tile = (label, value) => h("div", { class: "tile" }, h("div", { class: "tile-label" }, label), h("div", { class: "tile-value" }, value));
+  const tile = (label, value, tip) =>
+    h("div", { class: "tile" }, h("div", { class: "tile-label", "data-tip": tip }, label), h("div", { class: "tile-value" }, value));
   $("#tiles").replaceChildren(
-    tile("Runs", runCount.toLocaleString()),
-    tile("Model calls", rows.length.toLocaleString()),
-    tile("Total spend", fmtCost(costs.length ? spend : null)),
-    tile("Avg cost per call", fmtCost(costs.length ? spend / costs.length : null)),
-    tile("Errors", errors.toLocaleString()),
+    tile("Runs", runCount.toLocaleString(), "How many logged runs have at least one call matching the filters. A run is one evaluate() call, one evaluate_all_models() comparison or one chat page turn."),
+    tile("Model calls", rows.length.toLocaleString(), "How many individual model calls match the filters. A comparison across 5 models is one run but 5 calls."),
+    tile("Total spend", fmtCost(costs.length ? spend : null), "The estimated cost of every matching call added together, from the prices in MODEL_PRICING. Calls to unpriced models aren't counted."),
+    tile("Avg cost per call", fmtCost(costs.length ? spend / costs.length : null), "Total spend divided by the number of matching calls that have a cost estimate."),
+    tile("Errors", errors.toLocaleString(), "How many matching calls failed, for example because a model was unavailable or the request was rejected."),
   );
 }
 
 // text columns are left-aligned and first sort ascending; the rest first sort highest first
 const MODEL_COLUMNS = [
-  { key: "model", label: "Model", fmt: (v) => v, text: true },
-  { key: "provider", label: "Provider", fmt: (v) => v, text: true },
-  { key: "calls", label: "Calls", fmt: (v) => v.toLocaleString() },
-  { key: "errors", label: "Errors", fmt: (v) => v.toLocaleString() },
-  { key: "totalCost", label: "Total cost", fmt: fmtCost },
-  { key: "avgCost", label: "Avg cost", fmt: fmtCost },
-  { key: "avgSec", label: "Avg time", fmt: fmtSec },
-  { key: "avgOut", label: "Avg output tokens", fmt: fmtInt },
+  { key: "model", label: "Model", fmt: (v) => v, text: true, tip: "The model's API id. Click to sort by name." },
+  { key: "provider", label: "Provider", fmt: (v) => v, text: true, tip: "The company whose API served the model. Click to sort." },
+  { key: "calls", label: "Calls", fmt: (v) => v.toLocaleString(), tip: "How many matching calls this model made, failed ones included. Click to sort." },
+  { key: "errors", label: "Errors", fmt: (v) => v.toLocaleString(), tip: "How many of those calls failed. Click to sort." },
+  { key: "totalCost", label: "Total cost", fmt: fmtCost, tip: "The estimated cost of all this model's matching calls. Click to sort." },
+  { key: "avgCost", label: "Avg cost", fmt: fmtCost, tip: "Estimated cost per successful call. Longer prompts and answers cost more, so compare models on the same prompts. Click to sort." },
+  { key: "avgSec", label: "Avg time", fmt: fmtSec, tip: "Seconds per successful call, from sending the request to receiving the whole response. Click to sort." },
+  { key: "avgOut", label: "Avg output tokens", fmt: fmtInt, tip: "Output tokens per successful call. For OpenAI models this includes reasoning tokens, which are billed as output. Click to sort." },
 ];
 
 function renderModelTable(agg) {
@@ -705,6 +724,7 @@ function renderModelTable(agg) {
     return h("th", { scope: "col", class: col.text ? "text" : null, "aria-sort": active ? (state.modelSort.dir === 1 ? "ascending" : "descending") : null },
       h("button", {
         type: "button",
+        "data-tip": col.tip,
         onclick: () => {
           state.modelSort = active ? { key: col.key, dir: -state.modelSort.dir } : { key: col.key, dir: col.text ? 1 : -1 };
           renderModelTable(agg);
@@ -731,9 +751,9 @@ function compare(a, b) {
 
 function renderCharts(agg) {
   state.chartData = [
-    { title: "Average cost per call", fmt: fmtCost, items: agg.map((a) => ({ model: a.model, value: a.avgCost, n: a.costN })) },
-    { title: "Average response time", fmt: fmtSec, items: agg.map((a) => ({ model: a.model, value: a.avgSec, n: a.secN })) },
-    { title: "Average output tokens", fmt: fmtInt, items: agg.map((a) => ({ model: a.model, value: a.avgOut, n: a.outN })) },
+    { title: "Average cost per call", tip: "The Avg cost column as bars. Hover over a bar for the exact value and how many calls it averages.", fmt: fmtCost, items: agg.map((a) => ({ model: a.model, value: a.avgCost, n: a.costN })) },
+    { title: "Average response time", tip: "The Avg time column as bars: seconds per successful call.", fmt: fmtSec, items: agg.map((a) => ({ model: a.model, value: a.avgSec, n: a.secN })) },
+    { title: "Average output tokens", tip: "The Avg output tokens column as bars. More output usually means a longer answer and a higher cost.", fmt: fmtInt, items: agg.map((a) => ({ model: a.model, value: a.avgOut, n: a.outN })) },
   ];
   drawCharts();
 }
@@ -743,7 +763,7 @@ function drawCharts() {
   box.replaceChildren();
   if (!state.chartData.length || !state.chartData[0].items.length) return;
   for (const chart of state.chartData) {
-    const fig = h("figure", { class: "chart" }, h("figcaption", {}, chart.title));
+    const fig = h("figure", { class: "chart" }, h("figcaption", { "data-tip": chart.tip }, chart.title));
     box.append(fig);
     fig.append(barChart(fig.clientWidth || 320, chart));
   }
@@ -905,9 +925,12 @@ function runCard(run) {
     // Outside the head button, as a button can't hold another one
     const filtered = state.filters.session === first.sessionId;
     body.append(h("div", { class: "session-line" },
-      h("span", {}, "Session ", h("code", {}, first.sessionId), first.turn != null ? ` · turn ${first.turn}` : ""),
-      first.sessionTotal != null ? h("span", {}, `session total so far ${fmtCost(first.sessionTotal)}`) : null,
-      filtered ? null : h("button", { class: "btn-link", type: "button", onclick: () => setSessionFilter(first.sessionId) }, "Show only this session"),
+      h("span", { "data-tip": "This turn belongs to a chat page conversation. Every turn of that conversation has the same session id.", style: "cursor: help" },
+        "Session ", h("code", {}, first.sessionId), first.turn != null ? ` · turn ${first.turn}` : ""),
+      first.sessionTotal != null
+        ? h("span", { "data-tip": "What the conversation had cost up to and including this turn.", style: "cursor: help" }, `session total so far ${fmtCost(first.sessionTotal)}`)
+        : null,
+      filtered ? null : h("button", { class: "btn-link", type: "button", "data-tip": "Filter the page to just this conversation's turns. Use the Chat session filter or Clear filters to go back.", onclick: () => setSessionFilter(first.sessionId) }, "Show only this session"),
     ));
   }
   body.append(h("p", { class: open ? "prompt" : "prompt clamp" }, first.prompt || "(no prompt)"));
@@ -1100,6 +1123,53 @@ new ResizeObserver((entries) => {
   cancelAnimationFrame(resizeFrame);
   resizeFrame = requestAnimationFrame(drawCharts);
 }).observe($("#charts"));
+
+// ---------- Explanations (data-tip) ----------
+// Any element with data-tip shows it in a bubble on hover or keyboard focus; Escape, scrolling or moving away hides it.
+// Separate from the chart tooltip, which follows the mouse over bars.
+
+const tipBubble = h("div", { class: "tip-bubble", id: "tip-bubble", role: "tooltip" });
+document.body.append(tipBubble);
+let tipTarget = null;
+
+function showTip(target) {
+  const text = target.getAttribute("data-tip");
+  if (!text) return;
+  if (tipTarget && tipTarget !== target) tipTarget.removeAttribute("aria-describedby");
+  tipTarget = target;
+  target.setAttribute("aria-describedby", "tip-bubble");
+  tipBubble.textContent = text;
+  tipBubble.style.display = "block";
+  const r = target.getBoundingClientRect();
+  const w = tipBubble.offsetWidth, ht = tipBubble.offsetHeight;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+  let top = r.bottom + 8;
+  if (top + ht > window.innerHeight - 8) top = Math.max(8, r.top - ht - 8);
+  tipBubble.style.left = left + "px";
+  tipBubble.style.top = top + "px";
+}
+
+function hideTip() {
+  if (tipTarget) tipTarget.removeAttribute("aria-describedby");
+  tipTarget = null;
+  tipBubble.style.display = "none";
+}
+
+document.addEventListener("mouseover", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (t) { if (t !== tipTarget) showTip(t); }
+  else if (tipTarget && !tipTarget.contains(document.activeElement)) hideTip();
+});
+document.addEventListener("focusin", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (t) showTip(t); else hideTip();
+});
+document.addEventListener("focusout", (e) => { if (tipTarget && tipTarget.contains(e.target)) hideTip(); });
+// A tap on an ⓘ shows its text on touch screens, which have no hover
+document.addEventListener("click", (e) => { const t = e.target.closest(".info[data-tip]"); if (t) showTip(t); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
+window.addEventListener("scroll", hideTip, { capture: true, passive: true });
+window.addEventListener("resize", hideTip);
 
 initTheme();
 // ?session=<id> opens the viewer on one chat conversation (the chat page links here)

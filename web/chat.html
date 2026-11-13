@@ -161,6 +161,20 @@ button, input, textarea { font: inherit; color: inherit; }
 .meta-value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .meta-value.warn { color: var(--warning); }
 .reply-head { display: flex; justify-content: space-between; align-items: baseline; }
+
+/* Explanations: any element with data-tip shows it on hover or focus; .info is a focusable ⓘ for headings */
+.tip-bubble {
+  position: fixed; z-index: 30; display: none; pointer-events: none; max-width: 280px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  font-size: 12px; line-height: 1.45; color: var(--text-primary); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.info {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; padding: 0; vertical-align: 1px;
+  border: 1px solid var(--border); border-radius: 50%; background: none; color: var(--text-muted);
+  font: italic 600 11px/1 Georgia, serif; cursor: help;
+}
+.info:hover, .info:focus-visible { color: var(--accent-ink); border-color: var(--accent); }
+.meta-label[data-tip], .summary [data-tip]:not(button):not(a) { cursor: help; }
 </style>
 </head>
 <body>
@@ -174,11 +188,11 @@ button, input, textarea { font: inherit; color: inherit; }
 
   <section class="panel" aria-labelledby="models-title">
     <div class="models-head">
-      <h2 id="models-title">Models</h2>
+      <h2 id="models-title">Models<button type="button" class="info" aria-label="About choosing models" data-tip="Every checked model gets your prompt, as a separate billed call, and answers in its own tab. Uncheck the ones you don't need to save money. The choice is fixed once a conversation starts, so each model has a complete history.">i</button></h2>
       <div>
         <span id="models-count" class="models-count"></span>
-        <button type="button" class="btn-link" data-select="all">Select all</button>
-        <button type="button" class="btn-link" data-select="none">Clear</button>
+        <button type="button" class="btn-link" data-select="all" data-tip="Check every model.">Select all</button>
+        <button type="button" class="btn-link" data-select="none" data-tip="Uncheck every model.">Clear</button>
       </div>
     </div>
     <p id="locked-note" class="locked-note" hidden>Models, system prompt and logging are fixed for this conversation. Press Clear conversation to change them.</p>
@@ -186,18 +200,18 @@ button, input, textarea { font: inherit; color: inherit; }
   </section>
 
   <form id="composer" class="panel composer">
-    <label for="prompt" class="hint">Prompt</label>
+    <label for="prompt" class="hint">Prompt</label><button type="button" class="info" aria-label="About the prompt" data-tip="Your next message. It goes to every model in the conversation, and each model also sees its own earlier turns, so you can ask follow-up questions.">i</button>
     <textarea id="prompt" placeholder="Ask every checked model the same question…" required></textarea>
     <details>
-      <summary>System prompt (optional)</summary>
+      <summary data-tip="Instructions sent with every turn, separately from your messages, e.g. a tone or answer length. It's fixed for the whole conversation.">System prompt (optional)</summary>
       <textarea id="system" placeholder="e.g. Answer in one sentence."></textarea>
     </details>
     <div class="composer-actions">
-      <label><input type="checkbox" id="log" checked> Log each turn to <code>logs/eval_log.json</code></label>
+      <label data-tip="Save each turn (prompt, every model's response, tokens and cost, plus the session id and running total) to the log, where the log viewer can show it. Fixed for the whole conversation."><input type="checkbox" id="log" checked> Log each turn to <code>logs/eval_log.json</code></label>
       <span class="composer-buttons">
         <span class="hint">Ctrl+Enter to send · every model checked is a billed call · each turn resends the whole conversation, so input tokens (and cost) grow every turn</span>
-        <button type="button" id="clear" class="btn" disabled>Clear conversation</button>
-        <button type="submit" id="send" class="btn btn-primary">Send</button>
+        <button type="button" id="clear" class="btn" disabled data-tip="Forget this conversation and start a new one with a new session id. You can then change the models, system prompt and logging. Turns already logged stay in the log.">Clear conversation</button>
+        <button type="submit" id="send" class="btn btn-primary" data-tip="Send the prompt to every model in the conversation. Each turn resends the whole history, so every turn costs a bit more than the last.">Send</button>
       </span>
     </div>
   </form>
@@ -286,8 +300,8 @@ function renderModels() {
       row.append(el("label", { class: "chip" }, box, model));
     }
     row.append(
-      el("button", { type: "button", class: "btn-link", "data-select": "all", "data-provider": provider, text: "All" }),
-      el("button", { type: "button", class: "btn-link", "data-select": "none", "data-provider": provider, text: "None" }),
+      el("button", { type: "button", class: "btn-link", "data-select": "all", "data-provider": provider, "data-tip": `Check every ${provider} model.`, text: "All" }),
+      el("button", { type: "button", class: "btn-link", "data-select": "none", "data-provider": provider, "data-tip": `Uncheck every ${provider} model.`, text: "None" }),
     );
     root.append(row);
   }
@@ -356,6 +370,7 @@ function buildTabs(models) {
     const id = `m${i}`;
     const tab = el("button", {
       type: "button", class: "tab", role: "tab", id: `tab-${id}`, "aria-controls": `panel-${id}`,
+      "data-tip": `${model}'s conversation. The icon shows its latest turn: spinning while running, ✓ done, ! stopped early (e.g. hit the token limit), ✕ failed. The cost is everything this model has cost in this conversation.`,
     }, el("span", { class: "status wait", "aria-label": "Running" }), model, el("span", { class: "cost" }));
     const panel = el("div", { class: "tabpanel", role: "tabpanel", id: `panel-${id}`, "aria-labelledby": `tab-${id}` });
     tab.addEventListener("click", () => selectTab(model));
@@ -392,8 +407,24 @@ function startTurn(turn, prompt) {
   if (shown) shown.current.turnEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
+// What each per-turn figure means, shown when hovering over its label
+const META_TIPS = {
+  "Provider": "The company whose API served this model.",
+  "Time": "Seconds from sending the request to receiving the whole reply.",
+  "Stop reason": "Why the model stopped. end_turn (Anthropic) and completed (OpenAI) mean it finished normally; anything else, such as max_tokens, means the reply was cut short.",
+  "Input tokens": "Tokens sent that weren't read from the cache: the system prompt, this model's earlier turns and your new message. It grows every turn because the whole history is resent.",
+  "Output tokens": "Tokens the model wrote. Output costs several times more per token than input.",
+  "of which reasoning": "OpenAI only: tokens the model spent thinking before answering. They're already counted in Output tokens and billed as output.",
+  "Cache read": "Input tokens served from the provider's prompt cache, charged at a much lower rate.",
+  "Cache write": "Input tokens written to the prompt cache for later turns, charged a little above the normal input rate.",
+  "Call cost": "The estimated cost of this one call, from the prices in MODEL_PRICING.",
+  "Model's session cost": "Everything this model has cost in this conversation so far, this call included.",
+};
+
 function metaItem(label, value, cls = "") {
-  return el("div", {}, el("div", { class: "meta-label", text: label }), el("div", { class: "meta-value " + cls, text: value }));
+  const labelAttrs = { class: "meta-label", text: label };
+  if (META_TIPS[label]) labelAttrs["data-tip"] = META_TIPS[label];
+  return el("div", {}, el("div", labelAttrs), el("div", { class: "meta-value " + cls, text: value }));
 }
 
 function fillTurn(result) {
@@ -424,7 +455,7 @@ function fillTurn(result) {
   t.tab.querySelector(".cost").textContent = fmtCost(session.modelCosts[result.model]);
   turn.costEl.textContent = result.error ? "" : fmtCost(cost);
 
-  const copy = el("button", { type: "button", class: "btn-link", text: "Copy response" });
+  const copy = el("button", { type: "button", class: "btn-link", "data-tip": "Copy this reply's text to the clipboard.", text: "Copy response" });
   copy.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(result.response); copy.textContent = "Copied"; }
     catch { copy.textContent = "Copy failed"; }
@@ -464,7 +495,7 @@ function fillTurn(result) {
 
 function sessionTools() {
   const id = session.id;
-  const copy = el("button", { type: "button", class: "btn-link", text: "Copy" });
+  const copy = el("button", { type: "button", class: "btn-link", "data-tip": "Copy the session id, e.g. to paste into the log viewer's search box.", text: "Copy" });
   copy.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(id); copy.textContent = "Copied"; }
     catch { copy.textContent = "Copy failed"; }
@@ -473,9 +504,12 @@ function sessionTools() {
   const tools = el("span", { class: "session-tools" }, copy);
   // Only a logged conversation can be found in the log viewer
   if (session.log) {
-    tools.append(el("a", { href: "/?session=" + encodeURIComponent(id), target: "_blank", rel: "noopener", text: "View in log" }));
+    tools.append(el("a", {
+      href: "/?session=" + encodeURIComponent(id), target: "_blank", rel: "noopener",
+      "data-tip": "Open the log viewer in a new tab, showing only this conversation's logged turns.", text: "View in log",
+    }));
   } else {
-    tools.append(el("span", { class: "hint", text: "not logged" }));
+    tools.append(el("span", { class: "hint", "data-tip": "Logging was off when this conversation started, so its turns aren't in the log.", text: "not logged" }));
   }
   return tools;
 }
@@ -488,15 +522,21 @@ function updateSummary(doneMsg) {
   const turnTotal = results.reduce((s, r) => s + (costOf(r) || 0), 0);
   const summary = $("summary");
   summary.replaceChildren(
-    "Session ", el("code", { class: "session-id", text: session.id }), " ", sessionTools(),
-    " · ", el("strong", { text: `Turn ${session.turn}` }),
+    el("span", { "data-tip": "This conversation's id. Every logged turn records it, so the log viewer's Chat session filter can show the whole conversation.", tabindex: "0" },
+      "Session ", el("code", { class: "session-id", text: session.id })),
+    " ", sessionTools(),
+    " · ", el("strong", { "data-tip": "How many prompts have been sent in this conversation.", tabindex: "0", text: `Turn ${session.turn}` }),
     ` · ${ok} of ${tabs.size} succeeded`,
     failed ? ` · ${failed} failed` : "",
     pending ? ` · ${pending} running` : "",
-    " · this turn ", el("strong", { class: "num", text: fmtCost(turnTotal) }),
-    " · session ", el("strong", { class: "num", text: fmtCost(session.total) }),
+    " · ", el("span", { "data-tip": "The estimated cost of this turn: every model's call for your latest prompt.", tabindex: "0" },
+      "this turn ", el("strong", { class: "num", text: fmtCost(turnTotal) })),
+    " · ", el("span", { "data-tip": "The estimated cost of the whole conversation so far, every turn and every model. When the turn is logged, this is the total recorded in the log.", tabindex: "0" },
+      "session ", el("strong", { class: "num", text: fmtCost(session.total) })),
   );
   if (doneMsg) summary.append(" · " + doneMsg);
+  // The summary is rebuilt as each model finishes; drop a tooltip whose element was just replaced
+  if (tipTarget && !tipTarget.isConnected) hideTip();
 }
 
 // ---- Conversation ----
@@ -627,6 +667,52 @@ async function send() {
     updateControls();
   }
 }
+
+// ---- Explanations (data-tip) ----
+// Any element with data-tip shows it in a bubble on hover or keyboard focus; Escape, scrolling or moving away hides it.
+
+const tipBubble = el("div", { class: "tip-bubble", id: "tip-bubble", role: "tooltip" });
+document.body.append(tipBubble);
+let tipTarget = null;
+
+function showTip(target) {
+  const text = target.getAttribute("data-tip");
+  if (!text) return;
+  if (tipTarget && tipTarget !== target) tipTarget.removeAttribute("aria-describedby");
+  tipTarget = target;
+  target.setAttribute("aria-describedby", "tip-bubble");
+  tipBubble.textContent = text;
+  tipBubble.style.display = "block";
+  const r = target.getBoundingClientRect();
+  const w = tipBubble.offsetWidth, ht = tipBubble.offsetHeight;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+  let top = r.bottom + 8;
+  if (top + ht > window.innerHeight - 8) top = Math.max(8, r.top - ht - 8);
+  tipBubble.style.left = left + "px";
+  tipBubble.style.top = top + "px";
+}
+
+function hideTip() {
+  if (tipTarget) tipTarget.removeAttribute("aria-describedby");
+  tipTarget = null;
+  tipBubble.style.display = "none";
+}
+
+document.addEventListener("mouseover", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (t) { if (t !== tipTarget) showTip(t); }
+  else if (tipTarget && !tipTarget.contains(document.activeElement)) hideTip();
+});
+document.addEventListener("focusin", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (t) showTip(t); else hideTip();
+});
+document.addEventListener("focusout", (e) => { if (tipTarget && tipTarget.contains(e.target)) hideTip(); });
+// A tap on an ⓘ shows its text on touch screens, which have no hover
+document.addEventListener("click", (e) => { const t = e.target.closest(".info[data-tip]"); if (t) showTip(t); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
+window.addEventListener("scroll", hideTip, { capture: true, passive: true });
+window.addEventListener("resize", hideTip);
 
 $("composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
 $("prompt").addEventListener("keydown", (e) => {
