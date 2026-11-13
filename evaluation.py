@@ -84,6 +84,14 @@ def attachment_summary(attachments):
         for a in attachments
     ]
 
+def with_context_files(messages, context_files):
+    # Context files belong to the whole conversation: they go at the start of its first user message, ahead of that
+    # turn's own attachments, so every turn resends them. (The system prompt can't hold them: both APIs take only text there.)
+    if not context_files or not messages:
+        return messages
+    first = messages[0]
+    return [{**first, "attachments": list(context_files) + list(first.get("attachments") or [])}] + messages[1:]
+
 def _provider_messages(provider, messages):
     # A message with "attachments" becomes that provider's content blocks; anything else is passed on unchanged
     converted = []
@@ -145,7 +153,7 @@ def _read_log(log_file):
         raise ValueError(f"{log_file} is not a JSON list of log entries")
     return entries
 
-def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=None, attachments=None):
+def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=None, attachments=None, context_files=None):
     # The log file is one JSON array of runs, newest last, so a webpage can load it with a single JSON.parse
     entries = _read_log(log_file)
     total_cost = sum(r["usage"]["cost"]["total_cost"] for r in results if r["usage"] and r["usage"]["cost"])
@@ -157,9 +165,11 @@ def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=
         "system": system,
         "total_cost": total_cost,
     }
+    # Names, types and sizes only (see attachment_summary)
     if attachments:
-        # Names, types and sizes only (see attachment_summary)
         entry["attachments"] = attachments
+    if context_files:
+        entry["context_files"] = context_files
     if session_id is not None:
         # One entry per turn of a multi-turn chat; the session's running total comes from its earlier logged turns
         earlier = [e for e in entries if isinstance(e, dict) and e.get("session_id") == session_id]
@@ -330,6 +340,9 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
             prompt, system, models = body["prompt"], body.get("system") or None, body["models"]
             attachments = body.get("attachments") or []
             new_bytes = _check_attachments(attachments)
+            # Files for the whole conversation, added to each model's first user message (with_context_files)
+            context_files = body.get("context_files") or []
+            context_bytes = _check_attachments(context_files)
             allowed = set(default_models())
             if (not isinstance(prompt, str) or not (prompt.strip() or attachments)
                     or not (system is None or isinstance(system, str))
@@ -345,7 +358,7 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
                 raise ValueError("histories must map requested models to their messages")
             # Each model is sent its own history plus the new prompt, so the limit applies to the largest of them
             history_bytes = max((_check_history(h) for h in histories.values()), default=0)
-            if new_bytes + history_bytes > ATTACHMENTS_MAX_TOTAL_BYTES:
+            if context_bytes + new_bytes + history_bytes > ATTACHMENTS_MAX_TOTAL_BYTES:
                 raise ValueError(f"attachments in this conversation are over the {ATTACHMENTS_MAX_TOTAL_BYTES // 1_000_000} MB limit")
         except (ValueError, KeyError, TypeError) as e:
             self.send_error(400, str(e))
@@ -362,8 +375,8 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
         client_gone = False
         with ThreadPoolExecutor(max_workers=min(len(models), 16)) as pool:
             futures = [
-                pool.submit(_run_model_safe, m,
-                            histories.get(m, []) + [{"role": "user", "content": prompt, "attachments": attachments}], system)
+                pool.submit(_run_model_safe, m, with_context_files(
+                    histories.get(m, []) + [{"role": "user", "content": prompt, "attachments": attachments}], context_files), system)
                 for m in models
             ]
             for future in as_completed(futures):
@@ -385,7 +398,8 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
                 with _log_lock:
                     entry = log_evaluation("chat", prompt, system, [results[m] for m in models],
                                            log_file=self.log_file, session_id=session_id,
-                                           attachments=attachment_summary(attachments))
+                                           attachments=attachment_summary(attachments),
+                                           context_files=attachment_summary(context_files))
                 done["logged"] = True
                 if session_id is not None:
                     done["turn"] = entry["turn"]

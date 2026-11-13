@@ -198,6 +198,9 @@ button, input, textarea { font: inherit; color: inherit; }
 .user-msg .att-chip { background: var(--surface); }
 .user-msg .att-thumb.large { width: auto; height: auto; max-width: min(240px, 100%); max-height: 180px; object-fit: contain; }
 .composer.dragging { outline: 2px dashed var(--accent); outline-offset: 4px; }
+.context-area { border: 1px dashed var(--border); border-radius: 10px; padding: 10px; margin-top: 6px; }
+.context-area .attach-row { margin-top: 0; }
+.context-area .attachments { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -218,7 +221,7 @@ button, input, textarea { font: inherit; color: inherit; }
         <button type="button" class="btn-link" data-select="none" data-tip="Uncheck every model.">Clear</button>
       </div>
     </div>
-    <p id="locked-note" class="locked-note" hidden>Models, system prompt and logging are fixed for this conversation. Press Clear conversation to change them.</p>
+    <p id="locked-note" class="locked-note" hidden>Models, system prompt, context files and logging are fixed for this conversation. Press Clear conversation to change them.</p>
     <div id="models"><span class="hint">Loading models…</span></div>
   </section>
 
@@ -234,6 +237,17 @@ button, input, textarea { font: inherit; color: inherit; }
     <details>
       <summary data-tip="Instructions sent with every turn, separately from your messages, e.g. a tone or answer length. It's fixed for the whole conversation.">System prompt (optional)</summary>
       <textarea id="system" placeholder="e.g. Answer in one sentence."></textarea>
+    </details>
+    <details id="context-details">
+      <summary data-tip="Reference files for the whole conversation, such as a spec, a dataset or a style guide. Every model gets them at the start of the conversation, on every turn, so you can keep asking about them. Unlike attachments, which belong to one message, they're set before the first send and fixed until Clear conversation.">Context files (optional) <span id="context-count" class="hint"></span></summary>
+      <div id="context-drop" class="context-area">
+        <div class="attach-row">
+          <button type="button" id="context-add" class="btn" data-tip="Add images, PDFs or text files as context for the whole conversation. You can also drop files on this area. They share the 20 MB conversation limit with attachments.">Add context files</button>
+          <input type="file" id="context-input" multiple hidden>
+          <span class="hint" tabindex="0" data-tip="Context files are resent and billed on every turn, like the rest of the conversation, so large ones make every turn more expensive.">Drop files here · resent every turn</span>
+        </div>
+        <div id="context-files" class="attachments" aria-label="Context files for this conversation"></div>
+      </div>
     </details>
     <div class="composer-actions">
       <label data-tip="Save each turn (prompt, every model's response, tokens and cost, plus the session id and running total) to the log, where the log viewer can show it. Fixed for the whole conversation."><input type="checkbox" id="log" checked> Log each turn to <code>logs/eval_log.json</code></label>
@@ -300,6 +314,11 @@ const MAX_BYTES = { image: 5_000_000, pdf: 10_000_000, text: 1_000_000 };
 const MAX_TOTAL_BYTES = 20_000_000;
 
 let pending = []; // attachments for the next message: { type, name, media_type, data, bytes }
+// Files for the whole conversation, same shape: sent at the start of every model's first message on every turn,
+// and fixed once the conversation starts
+let contextFiles = [];
+
+const sumBytes = (list) => list.reduce((s, a) => s + a.bytes, 0);
 
 function fmtBytes(n) {
   return n < 1000 ? `${n} B` : n < 1_000_000 ? `${(n / 1000).toFixed(0)} KB` : `${(n / 1_000_000).toFixed(1)} MB`;
@@ -326,7 +345,10 @@ function conversationBytes() {
   return session ? Math.max(0, ...Object.values(session.historyBytes)) : 0;
 }
 
-async function addFiles(files) {
+// into is "message" (the next message's attachments) or "context" (the conversation's context files)
+async function addFiles(files, into = "message") {
+  if (into === "context" && session) return; // fixed until Clear conversation
+  const target = into === "context" ? contextFiles : pending;
   const problems = [];
   for (const file of files) {
     const type = kindOf(file);
@@ -338,7 +360,7 @@ async function addFiles(files) {
       problems.push(`${file.name}: ${file.size ? "over the " + fmtBytes(MAX_BYTES[type]) + " limit for " + type + " files" : "empty"}.`);
       continue;
     }
-    const used = conversationBytes() + pending.reduce((s, a) => s + a.bytes, 0);
+    const used = conversationBytes() + sumBytes(contextFiles) + sumBytes(pending);
     if (used + file.size > MAX_TOTAL_BYTES) {
       problems.push(`${file.name}: would take this conversation's attachments over ${fmtBytes(MAX_TOTAL_BYTES)}. Clear the conversation or remove a file.`);
       continue;
@@ -350,16 +372,17 @@ async function addFiles(files) {
           problems.push(`${file.name}: looks like a binary file, not text.`);
           continue;
         }
-        pending.push({ type, name: file.name, media_type: "text/plain", data: text, bytes: new TextEncoder().encode(text).length });
+        target.push({ type, name: file.name, media_type: "text/plain", data: text, bytes: new TextEncoder().encode(text).length });
       } else {
         const media_type = type === "pdf" ? "application/pdf" : file.type;
-        pending.push({ type, name: file.name, media_type, data: await readBase64(file), bytes: file.size });
+        target.push({ type, name: file.name, media_type, data: await readBase64(file), bytes: file.size });
       }
     } catch (err) {
       problems.push(`${file.name}: couldn't be read (${err && err.message ? err.message : err}).`);
     }
   }
   renderPending();
+  renderContext();
   if (problems.length) showError(problems.join(" "));
   else if (!running) showNotice("");
 }
@@ -383,6 +406,21 @@ function renderPending() {
     onRemove: () => { pending.splice(i, 1); renderPending(); hideTip(); },
   })));
 }
+
+function renderContext() {
+  // While a conversation is running the context files are fixed, so they have no remove buttons
+  $("context-files").replaceChildren(...contextFiles.map((a, i) => attachmentChip(a, {
+    onRemove: session ? null : () => { contextFiles.splice(i, 1); renderContext(); hideTip(); },
+  })));
+  $("context-count").textContent = contextFiles.length
+    ? `${contextFiles.length} file${contextFiles.length === 1 ? "" : "s"}, ${fmtBytes(sumBytes(contextFiles))}` : "";
+}
+
+$("context-add").addEventListener("click", () => $("context-input").click());
+$("context-input").addEventListener("change", (e) => {
+  addFiles([...e.target.files], "context");
+  e.target.value = "";
+});
 
 $("attach").addEventListener("click", () => $("file-input").click());
 $("file-input").addEventListener("change", (e) => {
@@ -409,7 +447,13 @@ $("composer").addEventListener("drop", (e) => {
   $("composer").classList.remove("dragging");
   if (!e.dataTransfer.files.length) return;
   e.preventDefault();
-  addFiles([...e.dataTransfer.files]);
+  // Dropped on the context files area: context for the conversation (unless it's already fixed); anywhere else: the next message
+  const onContext = e.target.closest("#context-drop");
+  if (onContext && session) {
+    showError("Context files are fixed for this conversation. Press Clear conversation to change them, or drop the file on the prompt box to attach it to your next message.");
+    return;
+  }
+  addFiles([...e.dataTransfer.files], onContext ? "context" : "message");
 });
 
 // ---- Model picker ----
@@ -431,6 +475,7 @@ function setLocked(locked) {
   for (const node of document.querySelectorAll("#models input, button[data-select]")) node.disabled = locked;
   $("system").disabled = locked;
   $("log").disabled = locked;
+  $("context-add").disabled = locked;
   $("locked-note").hidden = !locked;
 }
 
@@ -682,6 +727,10 @@ function updateSummary(doneMsg) {
       "Session ", el("code", { class: "session-id", text: session.id })),
     " ", sessionTools(),
     " · ", el("strong", { "data-tip": "How many prompts have been sent in this conversation.", tabindex: "0", text: `Turn ${session.turn}` }),
+    session.context.length
+      ? el("span", { "data-tip": `Sent to every model at the start of the conversation on every turn: ${session.context.map((a) => a.name).join(", ")}.`, tabindex: "0",
+          text: ` · ${session.context.length} context file${session.context.length === 1 ? "" : "s"}` })
+      : "",
     ` · ${ok} of ${tabs.size} succeeded`,
     failed ? ` · ${failed} failed` : "",
     pending ? ` · ${pending} running` : "",
@@ -706,12 +755,14 @@ function newSession() {
     models,
     system: $("system").value,
     log: $("log").checked,
+    context: contextFiles.slice(),
     histories: Object.fromEntries(models.map((m) => [m, []])),
     historyBytes: Object.fromEntries(models.map((m) => [m, 0])),
     modelCosts: Object.fromEntries(models.map((m) => [m, 0])),
     total: 0,
   };
   setLocked(true);
+  renderContext();
   buildTabs(models);
   $("results").hidden = false;
 }
@@ -729,6 +780,8 @@ function clearSession(keepNotice = false) {
   $("summary").replaceChildren();
   $("results").hidden = true;
   setLocked(false);
+  // The context files stay, ready for the next conversation, and can be changed again
+  renderContext();
   if (!keepNotice) showNotice("");
   updateControls();
   $("prompt").focus();
@@ -786,6 +839,7 @@ async function send() {
         session_id: session.id,
         histories: session.histories,
         attachments: attachments.map(wireAttachment),
+        context_files: session.context.map(wireAttachment),
       }),
     });
     if (!res.ok) throw new Error(`The server refused the request (HTTP ${res.status})`);

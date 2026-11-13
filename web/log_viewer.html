@@ -225,7 +225,7 @@ tbody tr:last-child td { border-bottom: none; }
 
   <section class="panel" aria-label="Filters">
     <div class="filters">
-      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider, chat session id or attachment names contain this text. Not case-sensitive.">Search prompts and responses
+      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider, chat session id, or attachment or context file names contain this text. Not case-sensitive.">Search prompts and responses
         <input type="search" id="f-text" placeholder="e.g. quantum">
       </label>
       <label class="field" data-tip="Where the run came from: evaluate() for one model, evaluate_all_models() for a comparison, or a turn sent from the chat page.">Run type
@@ -467,6 +467,7 @@ function loadEntries(data, source) {
         turn: num(e.turn),
         sessionTotal: num(e.session_total_cost),
         attachments: attachmentLabels(e.attachments),
+        contextFiles: attachmentLabels(e.context_files),
         prompt: promptText(e.prompt),
         system: systemText(e.system),
         model,
@@ -551,7 +552,7 @@ function filteredRows() {
       if (f.from && d < f.from) return false;
       if (f.to && d > f.to) return false;
     }
-    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || "", r.attachments.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
+    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || "", r.attachments.join(" "), r.contextFiles.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
     return true;
   });
 }
@@ -946,6 +947,10 @@ function runCard(run) {
     body.append(h("p", { class: "session-line", "data-tip": "Files sent with this prompt. The log keeps only their names, types and sizes, not their contents." },
       `Attachments: ${first.attachments.join(" · ")}`));
   }
+  if (first.contextFiles.length) {
+    body.append(h("p", { class: "session-line", "data-tip": "Context files for the whole chat conversation, sent to every model on every turn. The log keeps only their names, types and sizes." },
+      `Context files: ${first.contextFiles.join(" · ")}`));
+  }
   if (open) {
     if (first.system) body.append(h("div", { class: "label-sm" }, "System prompt"), h("p", { class: "prompt" }, first.system));
     const single = rows.length === 1;
@@ -995,6 +1000,7 @@ const CSV_COLUMNS = [
   ["session_total_cost", (r) => r.sessionTotal],
   ["prompt", (r) => r.prompt],
   ["attachments", (r) => r.attachments.join("; ")],
+  ["context_files", (r) => r.contextFiles.join("; ")],
   ["system", (r) => r.system],
   ["model", (r) => r.model],
   ["provider", (r) => r.provider],
