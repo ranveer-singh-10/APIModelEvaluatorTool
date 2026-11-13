@@ -2284,5 +2284,119 @@
         "error": null
       }
     ]
+  },
+  {
+    "timestamp": "2026-11-13T22:47:54.612315+00:00",
+    "type": "chat",
+    "prompt": "hi how old am i",
+    "system": "my name is makhan and im 55 from jalandhar",
+    "total_cost": 4.95e-05,
+    "session_id": "fc00d769",
+    "turn": 1,
+    "session_total_cost": 4.95e-05,
+    "results": [
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 1.2364175999973668,
+        "stop_reason": "end_turn",
+        "response": "You told me you're 55 years old, so by your own words, you're 55. Hi Makhan, nice to meet you from Jalandhar!",
+        "usage": {
+          "input_tokens": 32,
+          "output_tokens": 46,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 78,
+          "cost": {
+            "input_cost": 3.2000000000000003e-06,
+            "output_cost": 2.3e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 2.62e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 4.624507700005779,
+        "stop_reason": "completed",
+        "response": "You’re 55 years old.",
+        "usage": {
+          "input_tokens": 28,
+          "output_tokens": 41,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 28,
+          "total_tokens": 69,
+          "cost": {
+            "input_cost": 2.8000000000000003e-06,
+            "output_cost": 2.05e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 2.33e-05
+          }
+        },
+        "error": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-11-13T22:48:08.355463+00:00",
+    "type": "chat",
+    "prompt": "where am i from",
+    "system": "my name is makhan and im 55 from jalandhar",
+    "total_cost": 3.23e-05,
+    "session_id": "fc00d769",
+    "turn": 2,
+    "session_total_cost": 8.18e-05,
+    "results": [
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 0.919153799994092,
+        "stop_reason": "end_turn",
+        "response": "You told me you're from Jalandhar, a city in the Punjab region of India.",
+        "usage": {
+          "input_tokens": 84,
+          "output_tokens": 27,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 111,
+          "cost": {
+            "input_cost": 8.400000000000001e-06,
+            "output_cost": 1.35e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 2.19e-05
+          }
+        },
+        "error": null
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 2.3960444999975152,
+        "stop_reason": "completed",
+        "response": "You’re from Jalandhar.",
+        "usage": {
+          "input_tokens": 49,
+          "output_tokens": 11,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 0,
+          "total_tokens": 60,
+          "cost": {
+            "input_cost": 4.9000000000000005e-06,
+            "output_cost": 5.5e-06,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 1.04e-05
+          }
+        },
+        "error": null
+      }
+    ]
   }
 ]
