@@ -40,6 +40,27 @@ def add_user_message(messages, text):
 def add_assistant_message(messages, text):
     messages.append({"role": "assistant", "content": text})
 
+def user_content(text, attachments=()):
+    # Turns a prompt and provider-neutral attachments into Responses API input parts; matches AnthropicAPI.user_content.
+    # Each attachment is {"type": "image" | "pdf" | "text", "name", "media_type", "data"}: base64 for images and PDFs,
+    # plain text for text files.
+    if not attachments:
+        return text
+    parts = []
+    for a in attachments:
+        if a["type"] == "image":
+            parts.append({"type": "input_image", "detail": "auto", "image_url": f"data:{a['media_type']};base64,{a['data']}"})
+        elif a["type"] == "pdf":
+            parts.append({"type": "input_file", "filename": a["name"], "file_data": f"data:application/pdf;base64,{a['data']}"})
+        elif a["type"] == "text":
+            # Text files go in as text, headed with the file name, since input_file is meant for documents like PDFs
+            parts.append({"type": "input_text", "text": f"File: {a['name']}\n\n{a['data']}"})
+        else:
+            raise ValueError(f"Unsupported attachment type: {a['type']}")
+    if text:
+        parts.append({"type": "input_text", "text": text})
+    return parts
+
 def add_response_output(messages, response):
     # Copies every output item (reasoning, function calls, messages) so a tool-use loop keeps them in the history
     messages.extend(item.model_dump(exclude_none=True) for item in response.output)

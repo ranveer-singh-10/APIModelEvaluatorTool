@@ -63,6 +63,29 @@ def add_user_message(messages, text):
     user_message = {"role": "user", "content": text}
     messages.append(user_message)
 
+def user_content(text, attachments=()):
+    # Turns a prompt and provider-neutral attachments into Claude content blocks. OpenAIAPI.user_content does the same
+    # for OpenAI, so evaluation.py can send one set of attachments to both. Each attachment is
+    # {"type": "image" | "pdf" | "text", "name", "media_type", "data"}: base64 for images and PDFs, plain text for text.
+    if not attachments:
+        return text
+    blocks = []
+    for a in attachments:
+        if a["type"] == "image":
+            blocks.append({"type": "image", "source": {"type": "base64", "media_type": a["media_type"], "data": a["data"]}})
+        elif a["type"] == "pdf":
+            blocks.append({"type": "document", "title": a["name"],
+                           "source": {"type": "base64", "media_type": "application/pdf", "data": a["data"]}})
+        elif a["type"] == "text":
+            blocks.append({"type": "document", "title": a["name"],
+                           "source": {"type": "text", "media_type": "text/plain", "data": a["data"]}})
+        else:
+            raise ValueError(f"Unsupported attachment type: {a['type']}")
+    # Files first, then the question about them, which is the order Claude's docs recommend
+    if text:
+        blocks.append({"type": "text", "text": text})
+    return blocks
+
 def add_user_message_multi(messages, message):
     user_message = {
         "role": "user",

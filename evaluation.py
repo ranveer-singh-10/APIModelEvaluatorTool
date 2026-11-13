@@ -1,6 +1,8 @@
 import os
 import time
 import json
+import base64
+import binascii
 import threading
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -39,10 +41,66 @@ def provider_for(model):
 def default_models(providers=None):
     return [model for name in (providers or PROVIDERS) for model in PROVIDERS[name].MODEL_PRICING]
 
+# Attachments travel in one provider-neutral shape, {"type", "name", "media_type", "data"}, and each provider's
+# user_content() turns them into its own content blocks. Images and PDFs are base64; text files are plain text.
+ATTACHMENT_MEDIA_TYPES = {
+    "image": {"image/png", "image/jpeg", "image/gif", "image/webp"},
+    "pdf": {"application/pdf"},
+    "text": {"text/plain"},
+}
+# Bytes per file, and for all attachments sent in one request. Every turn resends the conversation's attachments,
+# and Anthropic rejects requests over 32 MB (base64 adds a third), so the total stays well under that.
+ATTACHMENT_MAX_BYTES = {"image": 5_000_000, "pdf": 10_000_000, "text": 1_000_000}
+ATTACHMENTS_MAX_TOTAL_BYTES = 20_000_000
+
+def _check_attachments(attachments):
+    # Validates attachments from the chat page and returns their total size in bytes
+    if not isinstance(attachments, list):
+        raise ValueError("attachments must be a list")
+    total = 0
+    for a in attachments:
+        if (not isinstance(a, dict) or set(a) != {"type", "name", "media_type", "data"}
+                or a["type"] not in ATTACHMENT_MEDIA_TYPES or a["media_type"] not in ATTACHMENT_MEDIA_TYPES[a["type"]]
+                or not isinstance(a["name"], str) or not 0 < len(a["name"]) <= 255
+                or not isinstance(a["data"], str)):
+            raise ValueError("each attachment needs a supported type and media_type, a name and its data")
+        if a["type"] == "text":
+            size = len(a["data"].encode("utf-8"))
+        else:
+            try:
+                size = len(base64.b64decode(a["data"], validate=True))
+            except (binascii.Error, ValueError):
+                raise ValueError(f"attachment {a['name']} is not valid base64")
+        if size == 0 or size > ATTACHMENT_MAX_BYTES[a["type"]]:
+            raise ValueError(f"attachment {a['name']} is empty or over the {ATTACHMENT_MAX_BYTES[a['type']] // 1_000_000} MB limit")
+        total += size
+    return total
+
+def attachment_summary(attachments):
+    # What the log records about each attachment: never the data, which would bloat the log
+    return [
+        {"name": a["name"], "type": a["type"], "media_type": a["media_type"],
+         "bytes": len(a["data"].encode("utf-8")) if a["type"] == "text" else len(base64.b64decode(a["data"]))}
+        for a in attachments
+    ]
+
+def _provider_messages(provider, messages):
+    # A message with "attachments" becomes that provider's content blocks; anything else is passed on unchanged
+    converted = []
+    for m in messages:
+        if isinstance(m, dict) and "attachments" in m:
+            attachments = m["attachments"]
+            m = {k: v for k, v in m.items() if k != "attachments"}
+            if attachments:
+                m["content"] = provider.user_content(m["content"], attachments)
+        converted.append(m)
+    return converted
+
 def run_model(model, messages, system=None):
     # One non-streaming call through the provider's chat(), returning the fields every evaluation records
     provider_name = provider_for(model)
     provider = PROVIDERS[provider_name]
+    messages = _provider_messages(provider, messages)
     start = time.perf_counter()
     response, usage = provider.chat(messages, model=model, system=system, stream=False, return_full_response=True, return_usage=True)
     return {
@@ -87,7 +145,7 @@ def _read_log(log_file):
         raise ValueError(f"{log_file} is not a JSON list of log entries")
     return entries
 
-def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=None):
+def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=None, attachments=None):
     # The log file is one JSON array of runs, newest last, so a webpage can load it with a single JSON.parse
     entries = _read_log(log_file)
     total_cost = sum(r["usage"]["cost"]["total_cost"] for r in results if r["usage"] and r["usage"]["cost"])
@@ -99,6 +157,9 @@ def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=
         "system": system,
         "total_cost": total_cost,
     }
+    if attachments:
+        # Names, types and sizes only (see attachment_summary)
+        entry["attachments"] = attachments
     if session_id is not None:
         # One entry per turn of a multi-turn chat; the session's running total comes from its earlier logged turns
         earlier = [e for e in entries if isinstance(e, dict) and e.get("session_id") == session_id]
@@ -204,20 +265,30 @@ def evaluate_all_models(prompt, models=None, providers=None, system=None, respon
     return results
 
 def _check_history(history):
-    # A chat history from the page: text turns alternating user then assistant, ending with an assistant reply
+    # A chat history from the page: turns alternating user then assistant, ending with an assistant reply.
+    # User turns may carry attachments; returns their total size in bytes.
     if not isinstance(history, list) or len(history) % 2:
         raise ValueError("each history must be a list of user/assistant pairs")
+    total = 0
     for i, message in enumerate(history):
-        if (not isinstance(message, dict) or set(message) != {"role", "content"}
-                or message["role"] != ("user" if i % 2 == 0 else "assistant")
-                or not isinstance(message["content"], str) or not message["content"].strip()):
-            raise ValueError("history messages must alternate user and assistant, with non-empty text")
+        user = i % 2 == 0
+        allowed_keys = ({"role", "content"}, {"role", "content", "attachments"}) if user else ({"role", "content"},)
+        if (not isinstance(message, dict) or set(message) not in allowed_keys
+                or message["role"] != ("user" if user else "assistant")
+                or not isinstance(message["content"], str)):
+            raise ValueError("history messages must alternate user and assistant")
+        attachments = message.get("attachments") or []
+        total += _check_attachments(attachments)
+        # A user turn may be only attachments; every other message needs text
+        if not message["content"].strip() and not attachments:
+            raise ValueError("history messages need text or attachments")
+    return total
 
 class _LogViewerHandler(BaseHTTPRequestHandler):
     # Serves only the pages, the log and the model list - never the project folder, which holds .env
     log_file = LOG_FILE
-    # A multi-turn chat resends every model's whole conversation, so this allows for long ones
-    max_body_bytes = 8_000_000
+    # A multi-turn chat resends every model's whole conversation, attachments included, so this allows for long ones
+    max_body_bytes = 40_000_000
 
     def do_GET(self):
         path = self.path.split("?")[0]
@@ -257,8 +328,10 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
                 raise ValueError("missing or oversized body")
             body = json.loads(self.rfile.read(length))
             prompt, system, models = body["prompt"], body.get("system") or None, body["models"]
+            attachments = body.get("attachments") or []
+            new_bytes = _check_attachments(attachments)
             allowed = set(default_models())
-            if (not isinstance(prompt, str) or not prompt.strip()
+            if (not isinstance(prompt, str) or not (prompt.strip() or attachments)
                     or not (system is None or isinstance(system, str))
                     or not isinstance(models, list) or not models
                     or any(m not in allowed for m in models)):
@@ -270,8 +343,10 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
                 raise ValueError("session_id must be a short string")
             if not isinstance(histories, dict) or any(m not in models for m in histories):
                 raise ValueError("histories must map requested models to their messages")
-            for history in histories.values():
-                _check_history(history)
+            # Each model is sent its own history plus the new prompt, so the limit applies to the largest of them
+            history_bytes = max((_check_history(h) for h in histories.values()), default=0)
+            if new_bytes + history_bytes > ATTACHMENTS_MAX_TOTAL_BYTES:
+                raise ValueError(f"attachments in this conversation are over the {ATTACHMENTS_MAX_TOTAL_BYTES // 1_000_000} MB limit")
         except (ValueError, KeyError, TypeError) as e:
             self.send_error(400, str(e))
             return
@@ -287,7 +362,8 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
         client_gone = False
         with ThreadPoolExecutor(max_workers=min(len(models), 16)) as pool:
             futures = [
-                pool.submit(_run_model_safe, m, histories.get(m, []) + [{"role": "user", "content": prompt}], system)
+                pool.submit(_run_model_safe, m,
+                            histories.get(m, []) + [{"role": "user", "content": prompt, "attachments": attachments}], system)
                 for m in models
             ]
             for future in as_completed(futures):
@@ -308,7 +384,8 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
             try:
                 with _log_lock:
                     entry = log_evaluation("chat", prompt, system, [results[m] for m in models],
-                                           log_file=self.log_file, session_id=session_id)
+                                           log_file=self.log_file, session_id=session_id,
+                                           attachments=attachment_summary(attachments))
                 done["logged"] = True
                 if session_id is not None:
                     done["turn"] = entry["turn"]

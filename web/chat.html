@@ -175,6 +175,29 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .info:hover, .info:focus-visible { color: var(--accent-ink); border-color: var(--accent); }
 .meta-label[data-tip], .summary [data-tip]:not(button):not(a) { cursor: help; }
+
+/* Attachments: chips under the prompt box before sending, and in each turn of the transcript */
+.attach-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.attachments { display: flex; flex-wrap: wrap; gap: 8px; }
+.attachments:empty { display: none; }
+.composer .attachments { margin-top: 8px; }
+.att-chip {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 6px 4px 4px; background: var(--bg); font-size: 12px;
+}
+.att-thumb { width: 36px; height: 36px; object-fit: cover; border-radius: 5px; flex: none; background: var(--surface-2); }
+.att-icon {
+  width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 5px;
+  background: var(--accent-bg); color: var(--accent-ink); font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+}
+.att-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.att-size { color: var(--text-muted); white-space: nowrap; }
+.att-remove { border: none; background: none; color: var(--text-muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 4px; }
+.att-remove:hover { color: var(--critical); }
+.user-msg .attachments { margin-bottom: 8px; }
+.user-msg .att-chip { background: var(--surface); }
+.user-msg .att-thumb.large { width: auto; height: auto; max-width: min(240px, 100%); max-height: 180px; object-fit: contain; }
+.composer.dragging { outline: 2px dashed var(--accent); outline-offset: 4px; }
 </style>
 </head>
 <body>
@@ -200,8 +223,14 @@ button, input, textarea { font: inherit; color: inherit; }
   </section>
 
   <form id="composer" class="panel composer">
-    <label for="prompt" class="hint">Prompt</label><button type="button" class="info" aria-label="About the prompt" data-tip="Your next message. It goes to every model in the conversation, and each model also sees its own earlier turns, so you can ask follow-up questions.">i</button>
-    <textarea id="prompt" placeholder="Ask every checked model the same question…" required></textarea>
+    <label for="prompt" class="hint">Prompt</label><button type="button" class="info" aria-label="About the prompt" data-tip="Your next message. It goes to every model in the conversation, and each model also sees its own earlier turns, so you can ask follow-up questions. You can send attachments with no text.">i</button>
+    <textarea id="prompt" placeholder="Ask every checked model the same question… (drop or paste files here too)"></textarea>
+    <div class="attach-row">
+      <button type="button" id="attach" class="btn" data-tip="Add images (PNG, JPEG, GIF, WebP), PDFs or text files (.txt, .md, .csv, .json, code…) to your next message. You can also drag files onto this box or paste an image. Limits: 5 MB per image, 10 MB per PDF, 1 MB per text file, 20 MB for the whole conversation.">Attach files</button>
+      <input type="file" id="file-input" multiple hidden>
+      <span class="hint" tabindex="0" data-tip="Attachments are part of the conversation, so every later turn sends them again. Images and PDFs make each turn noticeably more expensive, and a model that can't read a file type fails in its own tab.">Attachments are resent every turn</span>
+    </div>
+    <div id="attachments" class="attachments" aria-label="Attachments for the next message"></div>
     <details>
       <summary data-tip="Instructions sent with every turn, separately from your messages, e.g. a tone or answer length. It's fixed for the whole conversation.">System prompt (optional)</summary>
       <textarea id="system" placeholder="e.g. Answer in one sentence."></textarea>
@@ -260,6 +289,128 @@ function showError(text) {
   $("notice").textContent = text;
   $("notice").hidden = false;
 }
+
+// ---- Attachments ----
+// Same shapes and limits as evaluation.py checks: {type: image | pdf | text, name, media_type, data},
+// base64 for images and PDFs, plain text for text files.
+
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const TEXT_NAME = /\.(txt|text|md|markdown|csv|tsv|json|jsonl|xml|html?|css|js|mjs|ts|tsx|jsx|py|ipynb|java|kt|c|h|cpp|hpp|cs|go|rb|rs|php|swift|sh|bat|ps1|sql|ya?ml|toml|ini|cfg|conf|env\.example|log|tex|rst)$/i;
+const MAX_BYTES = { image: 5_000_000, pdf: 10_000_000, text: 1_000_000 };
+const MAX_TOTAL_BYTES = 20_000_000;
+
+let pending = []; // attachments for the next message: { type, name, media_type, data, bytes }
+
+function fmtBytes(n) {
+  return n < 1000 ? `${n} B` : n < 1_000_000 ? `${(n / 1000).toFixed(0)} KB` : `${(n / 1_000_000).toFixed(1)} MB`;
+}
+
+function kindOf(file) {
+  if (IMAGE_TYPES.has(file.type)) return "image";
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) return "pdf";
+  if (file.type.startsWith("text/") || file.type === "application/json" || TEXT_NAME.test(file.name)) return "text";
+  return null;
+}
+
+function readBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",", 2)[1] || "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// What every model will be sent again: the largest model history's attachments (they match unless a turn failed)
+function conversationBytes() {
+  return session ? Math.max(0, ...Object.values(session.historyBytes)) : 0;
+}
+
+async function addFiles(files) {
+  const problems = [];
+  for (const file of files) {
+    const type = kindOf(file);
+    if (!type) {
+      problems.push(`${file.name}: not a supported type. Attach images (PNG, JPEG, GIF, WebP), PDFs or text files.`);
+      continue;
+    }
+    if (file.size === 0 || file.size > MAX_BYTES[type]) {
+      problems.push(`${file.name}: ${file.size ? "over the " + fmtBytes(MAX_BYTES[type]) + " limit for " + type + " files" : "empty"}.`);
+      continue;
+    }
+    const used = conversationBytes() + pending.reduce((s, a) => s + a.bytes, 0);
+    if (used + file.size > MAX_TOTAL_BYTES) {
+      problems.push(`${file.name}: would take this conversation's attachments over ${fmtBytes(MAX_TOTAL_BYTES)}. Clear the conversation or remove a file.`);
+      continue;
+    }
+    try {
+      if (type === "text") {
+        const text = await file.text();
+        if (text.includes("\u0000")) {
+          problems.push(`${file.name}: looks like a binary file, not text.`);
+          continue;
+        }
+        pending.push({ type, name: file.name, media_type: "text/plain", data: text, bytes: new TextEncoder().encode(text).length });
+      } else {
+        const media_type = type === "pdf" ? "application/pdf" : file.type;
+        pending.push({ type, name: file.name, media_type, data: await readBase64(file), bytes: file.size });
+      }
+    } catch (err) {
+      problems.push(`${file.name}: couldn't be read (${err && err.message ? err.message : err}).`);
+    }
+  }
+  renderPending();
+  if (problems.length) showError(problems.join(" "));
+  else if (!running) showNotice("");
+}
+
+function attachmentChip(a, { large = false, onRemove = null } = {}) {
+  const preview = a.type === "image"
+    ? el("img", { class: large ? "att-thumb large" : "att-thumb", src: `data:${a.media_type};base64,${a.data}`, alt: a.name })
+    : el("span", { class: "att-icon", "aria-hidden": "true", text: a.type === "pdf" ? "PDF" : "TXT" });
+  const chip = el("span", { class: "att-chip", title: a.name },
+    preview, el("span", { class: "att-name", text: a.name }), el("span", { class: "att-size", text: fmtBytes(a.bytes) }));
+  if (onRemove) {
+    const remove = el("button", { type: "button", class: "att-remove", "aria-label": `Remove ${a.name}`, "data-tip": "Remove this file from the next message.", text: "×" });
+    remove.addEventListener("click", onRemove);
+    chip.append(remove);
+  }
+  return chip;
+}
+
+function renderPending() {
+  $("attachments").replaceChildren(...pending.map((a, i) => attachmentChip(a, {
+    onRemove: () => { pending.splice(i, 1); renderPending(); hideTip(); },
+  })));
+}
+
+$("attach").addEventListener("click", () => $("file-input").click());
+$("file-input").addEventListener("change", (e) => {
+  addFiles([...e.target.files]);
+  e.target.value = "";
+});
+$("prompt").addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData ? e.clipboardData.files : [])];
+  if (!files.length) return;
+  e.preventDefault();
+  // Pasted screenshots are all called image.png, so number them
+  addFiles(files.map((f, i) => (f.name && f.name !== "image.png") ? f
+    : new File([f], `pasted-image-${Date.now()}-${i + 1}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}`, { type: f.type })));
+});
+let dragDepth = 0;
+$("composer").addEventListener("dragenter", (e) => {
+  if (![...e.dataTransfer.types].includes("Files")) return;
+  e.preventDefault(); dragDepth++; $("composer").classList.add("dragging");
+});
+$("composer").addEventListener("dragover", (e) => { if ([...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
+$("composer").addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("composer").classList.remove("dragging"); } });
+$("composer").addEventListener("drop", (e) => {
+  dragDepth = 0;
+  $("composer").classList.remove("dragging");
+  if (!e.dataTransfer.files.length) return;
+  e.preventDefault();
+  addFiles([...e.dataTransfer.files]);
+});
 
 // ---- Model picker ----
 
@@ -388,19 +539,22 @@ function setStatus(t, kind, label, symbol) {
   status.setAttribute("aria-label", label);
 }
 
-function startTurn(turn, prompt) {
+function startTurn(turn, prompt, attachments) {
   for (const [model, t] of tabs) {
     const costEl = el("span", { class: "turn-cost" });
     const replyEl = el("div", {}, el("p", { class: "waiting", text: `Waiting for ${model}…` }));
+    const userMsg = el("div", { class: "user-msg" }, el("div", { class: "who", text: "You" }));
+    if (attachments.length) userMsg.append(el("div", { class: "attachments" }, ...attachments.map((a) => attachmentChip(a, { large: true }))));
+    if (prompt.trim()) userMsg.append(el("pre", { class: "response", text: prompt }));
     const turnEl = el("div", { class: "turn" },
       el("div", { class: "turn-head" }, el("span", { class: "turn-label", text: `Turn ${turn}` }), costEl),
-      el("div", { class: "user-msg" }, el("div", { class: "who", text: "You" }), el("pre", { class: "response", text: prompt })),
+      userMsg,
       replyEl,
     );
     t.panel.append(turnEl);
     const status = t.tab.querySelector(".status");
     const before = [status.className, status.getAttribute("aria-label"), status.textContent];
-    t.current = { prompt, turnEl, replyEl, costEl, result: null, before, previous: t.current };
+    t.current = { prompt, attachments, turnEl, replyEl, costEl, result: null, before, previous: t.current };
     setStatus(t, "wait", "Running", "");
   }
   const shown = tabs.get(selectedModel());
@@ -439,10 +593,12 @@ function fillTurn(result) {
   // Only a successful, non-empty reply joins the history, so it keeps alternating user and assistant turns
   const kept = !result.error && !!(result.response && result.response.trim());
   if (kept) {
-    session.histories[result.model].push(
-      { role: "user", content: turn.prompt },
-      { role: "assistant", content: result.response },
-    );
+    const user = { role: "user", content: turn.prompt };
+    if (turn.attachments.length) {
+      user.attachments = turn.attachments.map(wireAttachment);
+      session.historyBytes[result.model] += turn.attachments.reduce((s, a) => s + a.bytes, 0);
+    }
+    session.histories[result.model].push(user, { role: "assistant", content: result.response });
   }
   if (cost != null) {
     session.modelCosts[result.model] += cost;
@@ -551,12 +707,18 @@ function newSession() {
     system: $("system").value,
     log: $("log").checked,
     histories: Object.fromEntries(models.map((m) => [m, []])),
+    historyBytes: Object.fromEntries(models.map((m) => [m, 0])),
     modelCosts: Object.fromEntries(models.map((m) => [m, 0])),
     total: 0,
   };
   setLocked(true);
   buildTabs(models);
   $("results").hidden = false;
+}
+
+// Only the fields the server accepts: bytes is the page's own count
+function wireAttachment(a) {
+  return { type: a.type, name: a.name, media_type: a.media_type, data: a.data };
 }
 
 function clearSession(keepNotice = false) {
@@ -574,7 +736,7 @@ function clearSession(keepNotice = false) {
 
 $("clear").addEventListener("click", () => { if (!running) clearSession(); });
 
-function undoTurn(prompt) {
+function undoTurn(prompt, attachments) {
   // The server refused or never answered, so nothing was billed: take the turn back and restore the prompt
   for (const t of tabs.values()) {
     if (!t.current) continue;
@@ -586,12 +748,15 @@ function undoTurn(prompt) {
   }
   session.turn -= 1;
   $("prompt").value = prompt;
+  // Put the files back too, ahead of any added while the request was running
+  pending = attachments.concat(pending);
+  renderPending();
   if (session.turn === 0) clearSession(true);
 }
 
 async function send() {
   const prompt = $("prompt").value;
-  if (running || !prompt.trim() || (!session && checkedModels().length === 0)) return;
+  if (running || (!prompt.trim() && !pending.length) || (!session && checkedModels().length === 0)) return;
 
   running = true;
   showNotice("");
@@ -600,7 +765,10 @@ async function send() {
   updateControls();
   $("send").textContent = "Running…";
   $("prompt").value = "";
-  startTurn(session.turn, prompt);
+  const attachments = pending;
+  pending = [];
+  renderPending();
+  startTurn(session.turn, prompt, attachments);
   updateSummary();
 
   let doneMsg = "";
@@ -617,6 +785,7 @@ async function send() {
         log: session.log,
         session_id: session.id,
         histories: session.histories,
+        attachments: attachments.map(wireAttachment),
       }),
     });
     if (!res.ok) throw new Error(`The server refused the request (HTTP ${res.status})`);
@@ -650,7 +819,7 @@ async function send() {
     showError(String(err.message || err));
   } finally {
     if (notStarted) {
-      undoTurn(prompt);
+      undoTurn(prompt, attachments);
     } else {
       // Any tab still waiting never got a result, e.g. because the server stopped
       for (const [model, t] of tabs) {

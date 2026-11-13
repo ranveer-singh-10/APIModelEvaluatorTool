@@ -225,7 +225,7 @@ tbody tr:last-child td { border-bottom: none; }
 
   <section class="panel" aria-label="Filters">
     <div class="filters">
-      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider or chat session id contains this text. Not case-sensitive.">Search prompts and responses
+      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider, chat session id or attachment names contain this text. Not case-sensitive.">Search prompts and responses
         <input type="search" id="f-text" placeholder="e.g. quantum">
       </label>
       <label class="field" data-tip="Where the run came from: evaluate() for one model, evaluate_all_models() for a comparison, or a turn sent from the chat page.">Run type
@@ -419,6 +419,13 @@ function parseLog(text) {
 const str = (v, fallback) =>
   v == null || v === "" || v === false ? fallback : typeof v === "object" ? JSON.stringify(v) : String(v);
 
+// A chat turn's attachments are logged as {name, type, media_type, bytes}, without their data; shown as "name (type, size)"
+function attachmentLabels(list) {
+  if (!Array.isArray(list)) return [];
+  const size = (n) => n == null ? "" : n < 1000 ? `, ${n} B` : n < 1_000_000 ? `, ${(n / 1000).toFixed(0)} KB` : `, ${(n / 1_000_000).toFixed(1)} MB`;
+  return list.filter((a) => a && typeof a === "object").map((a) => `${str(a.name, "file")} (${str(a.type, "file")}${size(num(a.bytes))})`);
+}
+
 // Entries in a run's results that aren't objects (null, false, 0) are skipped everywhere, including the run's model count
 const isResult = (r) => !!r && typeof r === "object";
 
@@ -459,6 +466,7 @@ function loadEntries(data, source) {
         sessionId: str(e.session_id, null),
         turn: num(e.turn),
         sessionTotal: num(e.session_total_cost),
+        attachments: attachmentLabels(e.attachments),
         prompt: promptText(e.prompt),
         system: systemText(e.system),
         model,
@@ -543,7 +551,7 @@ function filteredRows() {
       if (f.from && d < f.from) return false;
       if (f.to && d > f.to) return false;
     }
-    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || ""].some((t) => t.toLowerCase().includes(q))) return false;
+    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || "", r.attachments.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
     return true;
   });
 }
@@ -933,7 +941,11 @@ function runCard(run) {
       filtered ? null : h("button", { class: "btn-link", type: "button", "data-tip": "Filter the page to just this conversation's turns. Use the Chat session filter or Clear filters to go back.", onclick: () => setSessionFilter(first.sessionId) }, "Show only this session"),
     ));
   }
-  body.append(h("p", { class: open ? "prompt" : "prompt clamp" }, first.prompt || "(no prompt)"));
+  body.append(h("p", { class: open ? "prompt" : "prompt clamp" }, first.prompt || (first.attachments.length ? "(attachments only)" : "(no prompt)")));
+  if (first.attachments.length) {
+    body.append(h("p", { class: "session-line", "data-tip": "Files sent with this prompt. The log keeps only their names, types and sizes, not their contents." },
+      `Attachments: ${first.attachments.join(" · ")}`));
+  }
   if (open) {
     if (first.system) body.append(h("div", { class: "label-sm" }, "System prompt"), h("p", { class: "prompt" }, first.system));
     const single = rows.length === 1;
@@ -982,6 +994,7 @@ const CSV_COLUMNS = [
   ["turn", (r) => r.turn],
   ["session_total_cost", (r) => r.sessionTotal],
   ["prompt", (r) => r.prompt],
+  ["attachments", (r) => r.attachments.join("; ")],
   ["system", (r) => r.system],
   ["model", (r) => r.model],
   ["provider", (r) => r.provider],
