@@ -1,0 +1,17 @@
+[
+  {
+    "id": "capital-australia",
+    "prompt": "What is the capital of Australia? Answer with just the city name.",
+    "expected": "Canberra"
+  },
+  {
+    "id": "arithmetic",
+    "prompt": "A shop sells pens at $1.25 each. How much do 12 pens cost? Show the final amount.",
+    "expected": "$15.00"
+  },
+  {
+    "id": "explain-recursion",
+    "prompt": "Explain recursion to a beginner programmer in three sentences or fewer.",
+    "rubric": "Says a recursive function calls itself; mentions a base case that stops the recursion; stays within three sentences and avoids jargon a beginner wouldn't know."
+  }
+]

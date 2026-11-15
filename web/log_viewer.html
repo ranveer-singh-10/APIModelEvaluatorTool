@@ -137,6 +137,12 @@ tbody tr:last-child td { border-bottom: none; }
 .chart .gridline { stroke: var(--grid); stroke-width: 1; }
 .chart .baseline { stroke: var(--border); stroke-width: 1; }
 .chart .tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .axis-title { fill: var(--text-secondary); font-size: 11px; }
+.chart .pass-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart .dot { fill: var(--series-1); stroke: var(--surface); stroke-width: 2; }
+.chart .point:hover .dot, .chart .point:focus-within .dot { stroke: var(--text-primary); }
+.chart .point-label { fill: var(--text-secondary); font-size: 11px; }
+.chart .note { font-size: 12px; color: var(--text-muted); margin: 4px 0 0; }
 
 .tooltip {
   position: fixed; z-index: 10; pointer-events: none; display: none;
@@ -175,6 +181,12 @@ tbody tr:last-child td { border-bottom: none; }
 .metrics dt { font-size: 11px; color: var(--text-muted); }
 .metrics dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
 .response { white-space: pre-wrap; overflow-wrap: anywhere; }
+.badge-score { font-variant-numeric: tabular-nums; font-weight: 600; }
+.badge-muted { background: var(--surface-2); color: var(--text-secondary); }
+.grade { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; font-size: 13px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.grade strong { color: var(--text-primary); }
+.grade.failed { color: var(--critical); }
+.expected { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .error-box { border-radius: 8px; padding: 8px 10px; background: var(--critical-bg); color: var(--critical); overflow-wrap: anywhere; }
 .empty { color: var(--text-secondary); padding: 8px 0; }
 
@@ -225,15 +237,21 @@ tbody tr:last-child td { border-bottom: none; }
 
   <section class="panel" aria-label="Filters">
     <div class="filters">
-      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider, chat session id, or attachment or context file names contain this text. Not case-sensitive.">Search prompts and responses
+      <label class="field field-search" data-tip="Shows only calls whose prompt, system prompt, response, error, model, provider, chat session id, batch or case id, expected answer, rubric, grader reasoning, or attachment or context file names contain this text. Not case-sensitive.">Search prompts and responses
         <input type="search" id="f-text" placeholder="e.g. quantum">
       </label>
-      <label class="field" data-tip="Where the run came from: evaluate() for one model, evaluate_all_models() for a comparison, or a turn sent from the chat page.">Run type
+      <label class="field" data-tip="Where the run came from: evaluate() for one model, evaluate_all_models() for a comparison, one case of an evaluate_batch() batch, or a turn sent from the chat page.">Run type
         <select id="f-type">
           <option value="all">All</option>
           <option value="evaluate">Single model (evaluate)</option>
           <option value="evaluate_all_models">All models (evaluate_all_models)</option>
+          <option value="batch">Batch case (evaluate_batch)</option>
           <option value="chat">Chat page (chat_ui)</option>
+        </select>
+      </label>
+      <label class="field field-session" data-tip="Show only the cases of one evaluate_batch() run. Each batch has its own id, printed when it finishes.">Batch
+        <select id="f-batch">
+          <option value="all">All</option>
         </select>
       </label>
       <label class="field field-session" data-tip="Show only the turns of one chat page conversation. Each conversation has its own session id, shown on the chat page.">Chat session
@@ -267,7 +285,7 @@ tbody tr:last-child td { border-bottom: none; }
   <div class="tiles" id="tiles"></div>
 
   <section class="panel">
-    <h2 class="title-row">Models<button type="button" class="info" aria-label="About the Models section" data-tip="One row per model, totalled over the calls that match the filters. Averages leave out failed calls and calls with no cost estimate. Click a column heading to sort by it. The charts compare the same averages.">i</button></h2>
+    <h2 class="title-row">Models<button type="button" class="info" aria-label="About the Models section" data-tip="One row per model, totalled over the calls that match the filters. Averages leave out failed calls and calls with no cost estimate. Scores are on a 1-5 scale and only scored calls count towards them. Click a column heading to sort by it. The charts compare the same averages.">i</button></h2>
     <div class="table-wrap" id="model-table"></div>
     <div class="charts" id="charts"></div>
   </section>
@@ -276,7 +294,7 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="runs-head">
       <div class="title-row">
         <h2 id="runs-title">Runs</h2>
-        <button type="button" class="info" aria-label="About the Runs section" data-tip="One card per logged run: an evaluate() call, an evaluate_all_models() comparison or one chat page turn. Click a card to see the full prompt and every model's response, tokens and cost. Only the calls that match the filters are shown.">i</button>
+        <button type="button" class="info" aria-label="About the Runs section" data-tip="One card per logged run: an evaluate() call, an evaluate_all_models() comparison, one case of a batch or one chat page turn. Click a card to see the full prompt and every model's response, tokens and cost. Only the calls that match the filters are shown.">i</button>
       </div>
       <label class="field" data-tip="Order the run cards by time, or by what each run cost in total.">Sort
         <select id="run-sort">
@@ -354,7 +372,7 @@ const state = {
   modelProvider: new Map(),
   source: "",
   excludedModels: new Set(),
-  filters: { text: "", type: "all", session: "all", provider: "all", status: "all", from: "", to: "" },
+  filters: { text: "", type: "all", session: "all", batch: "all", provider: "all", status: "all", from: "", to: "" },
   modelSort: { key: null, dir: 1 },
   runSort: "newest",
   expanded: new Set(),
@@ -429,6 +447,28 @@ function attachmentLabels(list) {
 // Entries in a run's results that aren't objects (null, false, 0) are skipped everywhere, including the run's model count
 const isResult = (r) => !!r && typeof r === "object";
 
+// Scores are 1-5 (evaluation.score_response); a score of PASS_SCORE or more is a pass. Keep in step with evaluation.PASS_SCORE.
+const SCORE_MAX = 5;
+const PASS_SCORE = 4;
+const fmtScore = (v) => (v == null ? "—" : v.toFixed(2));
+const fmtPct = (v) => (v == null ? "—" : Math.round(v * 100) + "%");
+
+// A result's score as logged: {value, scorer, reasoning, judge_model, judge_usage, error}, or null when it wasn't scored
+function scoreFields(sc) {
+  if (!sc || typeof sc !== "object") return { score: null, scored: false, scorer: null, reasoning: "", scoreError: null, judgeModel: null, judgeCost: null };
+  const value = num(sc.value);
+  const ju = sc.judge_usage && typeof sc.judge_usage === "object" ? sc.judge_usage : null;
+  return {
+    score: value != null && value >= 1 && value <= SCORE_MAX ? value : null,
+    scored: true,
+    scorer: str(sc.scorer, null),
+    reasoning: str(sc.reasoning, ""),
+    scoreError: str(sc.error, null),
+    judgeModel: str(sc.judge_model, null),
+    judgeCost: ju && ju.cost ? num(ju.cost.total_cost) : null,
+  };
+}
+
 function loadEntries(data, source) {
   if (!Array.isArray(data)) throw new Error("The log should be a JSON array of runs.");
   state.entries = data;
@@ -468,6 +508,12 @@ function loadEntries(data, source) {
         sessionTotal: num(e.session_total_cost),
         attachments: attachmentLabels(e.attachments),
         contextFiles: attachmentLabels(e.context_files),
+        // One case of an evaluate_batch() run: every case of a batch shares its batch_id
+        batchId: str(e.batch_id, null),
+        caseId: str(e.case_id, null),
+        expected: str(e.expected, ""),
+        rubric: str(e.rubric, ""),
+        ...scoreFields(r.score),
         prompt: promptText(e.prompt),
         system: systemText(e.system),
         model,
@@ -488,8 +534,9 @@ function loadEntries(data, source) {
   for (const r of state.rows) state.modelProvider.set(r.model, r.provider);
 
   hideNotice();
-  if (!data.length) showNotice("The log is empty. Run evaluate(...) or evaluate_all_models(...) with log=True, then press Reload.");
+  if (!data.length) showNotice("The log is empty. Run evaluate(...), evaluate_all_models(...) or evaluate_batch(...) with log=True, then press Reload.");
   renderSessionFilter();
+  renderBatchFilter();
   renderProviderFilter();
   renderModelFilter();
   render();
@@ -543,6 +590,7 @@ function filteredRows() {
     if (state.excludedModels.has(r.model)) return false;
     if (f.type !== "all" && r.type !== f.type) return false;
     if (f.session !== "all" && r.sessionId !== f.session) return false;
+    if (f.batch !== "all" && r.batchId !== f.batch) return false;
     if (f.provider !== "all" && r.provider !== f.provider) return false;
     if (f.status === "ok" && r.error) return false;
     if (f.status === "error" && !r.error) return false;
@@ -552,7 +600,8 @@ function filteredRows() {
       if (f.from && d < f.from) return false;
       if (f.to && d > f.to) return false;
     }
-    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || "", r.attachments.join(" "), r.contextFiles.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
+    if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || "", r.batchId || "", r.caseId || "",
+      r.expected, r.rubric, r.reasoning, r.attachments.join(" "), r.contextFiles.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
     return true;
   });
 }
@@ -602,6 +651,36 @@ function setSessionFilter(id) {
   state.runLimit = 50;
   $("#f-session").value = id;
   syncSessionUrl();
+  render();
+}
+
+// One option per evaluate_batch() run in the log, newest first, labelled with its id, start time and case count
+function renderBatchFilter() {
+  const batches = new Map();
+  state.entries.forEach((e, runId) => {
+    const id = e && str(e.batch_id, null);
+    if (id == null) return;
+    if (!batches.has(id)) {
+      const d = e.timestamp ? new Date(e.timestamp) : null;
+      batches.set(id, { id, runId, date: d && !isNaN(d) ? d : null, timestamp: str(e.timestamp, ""), cases: 0 });
+    }
+    batches.get(id).cases += 1;
+  });
+  const list = [...batches.values()].sort((a, b) =>
+    (b.date ? b.date.getTime() : b.runId) - (a.date ? a.date.getTime() : a.runId) || b.runId - a.runId);
+  if (!batches.has(state.filters.batch)) state.filters.batch = "all";
+  const select = $("#f-batch");
+  select.replaceChildren(
+    h("option", { value: "all" }, batches.size ? "All" : "All (no batches logged)"),
+    ...list.map((b) => h("option", { value: b.id }, `${b.id} · ${fmtDate(b.date, b.timestamp)} · ${plural(b.cases, "case")}`)),
+  );
+  select.value = state.filters.batch;
+}
+
+function setBatchFilter(id) {
+  state.filters.batch = id;
+  state.runLimit = 50;
+  $("#f-batch").value = id;
   render();
 }
 
@@ -658,7 +737,8 @@ function aggregate(rows) {
   for (const r of rows) {
     let a = byModel.get(r.model);
     if (!a) {
-      a = { model: r.model, provider: r.provider, calls: 0, errors: 0, costSum: 0, costN: 0, secSum: 0, secN: 0, outSum: 0, outN: 0 };
+      a = { model: r.model, provider: r.provider, calls: 0, errors: 0, costSum: 0, costN: 0, secSum: 0, secN: 0, outSum: 0, outN: 0,
+            scoreSum: 0, scoreN: 0, passes: 0, scoredCostSum: 0, scoredCostN: 0 };
       byModel.set(r.model, a);
     }
     a.calls++;
@@ -667,6 +747,12 @@ function aggregate(rows) {
     if (r.seconds != null) { a.secSum += r.seconds; a.secN++; }
     const out = r.usage ? num(r.usage.output_tokens) : null;
     if (out != null) { a.outSum += out; a.outN++; }
+    if (r.score != null) {
+      a.scoreSum += r.score; a.scoreN++;
+      if (r.score >= PASS_SCORE) a.passes++;
+      // Cost per pass counts only scored calls, so unscored runs in the same filter don't inflate it
+      if (r.totalCost != null) { a.scoredCostSum += r.totalCost; a.scoredCostN++; }
+    }
   }
   return [...byModel.values()].filter(Boolean).map((a) => ({
     ...a,
@@ -674,6 +760,11 @@ function aggregate(rows) {
     avgCost: a.costN ? a.costSum / a.costN : null,
     avgSec: a.secN ? a.secSum / a.secN : null,
     avgOut: a.outN ? a.outSum / a.outN : null,
+    avgScore: a.scoreN ? a.scoreSum / a.scoreN : null,
+    passRate: a.scoreN ? a.passes / a.scoreN : null,
+    costPerPass: a.passes && a.scoredCostN ? a.scoredCostSum / a.passes : null,
+    // Average cost of the scored calls only: the x of the accuracy vs cost chart, so both axes cover the same calls
+    avgScoredCost: a.scoredCostN ? a.scoredCostSum / a.scoredCostN : null,
   }));
 }
 
@@ -705,6 +796,18 @@ function renderTiles(rows, runCount) {
     tile("Avg cost per call", fmtCost(costs.length ? spend / costs.length : null), "Total spend divided by the number of matching calls that have a cost estimate."),
     tile("Errors", errors.toLocaleString(), "How many matching calls failed, for example because a model was unavailable or the request was rejected."),
   );
+  // Scoring tiles only once some matching call has been scored
+  const scored = rows.filter((r) => !r.error && r.score != null);
+  if (scored.length) {
+    const avg = scored.reduce((a, r) => a + r.score, 0) / scored.length;
+    const passes = scored.filter((r) => r.score >= PASS_SCORE).length;
+    const judge = rows.map((r) => r.judgeCost).filter((v) => v != null);
+    $("#tiles").append(
+      tile("Avg score", `${fmtScore(avg)} / ${SCORE_MAX}`, `The average 1-5 score of the ${plural(scored.length, "scored call")} that match the filters. Failed calls and unscored calls aren't counted.`),
+      tile("Pass rate", fmtPct(passes / scored.length), `The share of scored calls rated ${PASS_SCORE} or more out of ${SCORE_MAX}.`),
+      tile("Grader spend", fmtCost(judge.length ? judge.reduce((a, b) => a + b, 0) : null), "What the grader model cost to score the matching calls. It isn't included in Total spend, which is what the evaluated models cost."),
+    );
+  }
 }
 
 // text columns are left-aligned and first sort ascending; the rest first sort highest first
@@ -717,6 +820,9 @@ const MODEL_COLUMNS = [
   { key: "avgCost", label: "Avg cost", fmt: fmtCost, tip: "Estimated cost per successful call. Longer prompts and answers cost more, so compare models on the same prompts. Click to sort." },
   { key: "avgSec", label: "Avg time", fmt: fmtSec, tip: "Seconds per successful call, from sending the request to receiving the whole response. Click to sort." },
   { key: "avgOut", label: "Avg output tokens", fmt: fmtInt, tip: "Output tokens per successful call. For OpenAI models this includes reasoning tokens, which are billed as output. Click to sort." },
+  { key: "avgScore", label: "Avg score", fmt: fmtScore, score: true, tip: "The average 1-5 score of this model's scored calls, from the grader (llm_judge) or from exact / contains matching, which record a pass as 5 and a fail as 1. Click to sort." },
+  { key: "passRate", label: "Pass rate", fmt: fmtPct, score: true, tip: `The share of this model's scored calls rated ${PASS_SCORE} or more out of ${SCORE_MAX}. Click to sort.` },
+  { key: "costPerPass", label: "Cost per pass", fmt: fmtCost, score: true, tip: "What the model's scored calls cost, divided by how many of them passed: the price of one acceptable answer. Grading costs aren't included. Click to sort." },
 ];
 
 function renderModelTable(agg) {
@@ -725,8 +831,10 @@ function renderModelTable(agg) {
     wrap.replaceChildren(h("p", { class: "empty" }, "No model calls match the filters."));
     return;
   }
+  // The scoring columns appear only once some matching call has been scored
+  const columns = agg.some((a) => a.scoreN) ? MODEL_COLUMNS : MODEL_COLUMNS.filter((c) => !c.score);
   const { key, dir } = state.modelSort;
-  const rows = key ? [...agg].sort((a, b) => compare(a[key], b[key]) * dir) : agg;
+  const rows = key && columns.some((c) => c.key === key) ? [...agg].sort((a, b) => compare(a[key], b[key]) * dir) : agg;
   const sortHeader = (col) => {
     const active = state.modelSort.key === col.key;
     const arrow = active ? (state.modelSort.dir === 1 ? " ▲" : " ▼") : "";
@@ -742,9 +850,9 @@ function renderModelTable(agg) {
   };
   wrap.replaceChildren(
     h("table", {},
-      h("thead", {}, h("tr", {}, MODEL_COLUMNS.map(sortHeader))),
+      h("thead", {}, h("tr", {}, columns.map(sortHeader))),
       h("tbody", {}, rows.map((a) =>
-        h("tr", {}, MODEL_COLUMNS.map((col) =>
+        h("tr", {}, columns.map((col) =>
           h("td", { class: [col.text && "text", col.key === "errors" && a.errors && "err-count"].filter(Boolean).join(" ") || null }, col.fmt(a[col.key]))))))));
 }
 
@@ -764,18 +872,115 @@ function renderCharts(agg) {
     { title: "Average response time", tip: "The Avg time column as bars: seconds per successful call.", fmt: fmtSec, items: agg.map((a) => ({ model: a.model, value: a.avgSec, n: a.secN })) },
     { title: "Average output tokens", tip: "The Avg output tokens column as bars. More output usually means a longer answer and a higher cost.", fmt: fmtInt, items: agg.map((a) => ({ model: a.model, value: a.avgOut, n: a.outN })) },
   ];
+  if (agg.some((a) => a.scoreN)) {
+    state.chartData.unshift({
+      kind: "scatter",
+      title: "Accuracy vs cost",
+      tip: `One dot per model: its average score (up) against its average cost per scored call (right). Up and to the left is better: more accurate for less. The dashed line is the pass mark (${PASS_SCORE}). Compare models scored on the same prompts, for example one batch.`,
+      items: agg.filter((a) => a.avgScore != null && a.avgScoredCost != null)
+        .map((a) => ({ model: a.model, x: a.avgScoredCost, y: a.avgScore, n: a.scoreN, passRate: a.passRate })),
+    });
+    state.chartData.splice(1, 0, {
+      title: "Average score", tip: `The Avg score column as bars, out of ${SCORE_MAX}.`, fmt: fmtScore,
+      items: agg.map((a) => ({ model: a.model, value: a.avgScore, n: a.scoreN })),
+    });
+  }
   drawCharts();
 }
 
 function drawCharts() {
   const box = $("#charts");
   box.replaceChildren();
-  if (!state.chartData.length || !state.chartData[0].items.length) return;
+  if (!state.chartData.length || !state.chartData.some((c) => c.items.length)) return;
   for (const chart of state.chartData) {
     const fig = h("figure", { class: "chart" }, h("figcaption", { "data-tip": chart.tip }, chart.title));
     box.append(fig);
-    fig.append(barChart(fig.clientWidth || 320, chart));
+    if (chart.kind === "scatter") {
+      if (chart.items.length) fig.append(scatterChart(fig.clientWidth || 320, chart));
+      else fig.append(h("p", { class: "note" }, "No scored model has a cost estimate to plot."));
+    } else {
+      fig.append(barChart(fig.clientWidth || 320, chart));
+    }
   }
+}
+
+// Average score (y, fixed 1-5) against average cost (x). Costs between models often differ 100-fold, so x is
+// logarithmic when the range is wide enough to squash the cheap models together on a linear scale.
+function scatterChart(availableWidth, { title, items }) {
+  const padL = 40, padR = 16, padT = 10, axisH = 40;
+  const plotW = Math.min(MAX_PLOT_WIDTH, Math.max(160, availableWidth - padL - padR));
+  const plotH = 240;
+  const width = padL + plotW + padR, height = padT + plotH + axisH;
+
+  const xs = items.map((i) => i.x);
+  let lo = Math.min(...xs), hi = Math.max(...xs);
+  const useLog = lo > 0 && hi / lo >= 10;
+  let fx;
+  if (useLog) {
+    const a = Math.log10(lo) - 0.15, b = Math.log10(hi) + 0.15;
+    fx = (v) => padL + ((Math.log10(v) - a) / (b - a)) * plotW;
+    lo = 10 ** a; hi = 10 ** b;
+  } else {
+    const span = hi - lo || hi || 1;
+    lo = Math.max(0, lo - span * 0.1); hi = hi + span * 0.1;
+    fx = (v) => padL + ((v - lo) / (hi - lo)) * plotW;
+  }
+  const fy = (v) => padT + plotH - ((v - 1) / (SCORE_MAX - 1)) * plotH;
+
+  const svg = s("svg", { width, height, viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${title}: average score against average cost per model` });
+
+  // Recessive grid: one line per score, the pass mark dashed
+  for (let v = 1; v <= SCORE_MAX; v++) {
+    svg.append(s("line", { class: v === PASS_SCORE ? "pass-line" : v === 1 ? "baseline" : "gridline", x1: padL, x2: padL + plotW, y1: fy(v), y2: fy(v) }));
+    svg.append(s("text", { class: "tick", x: padL - 8, y: fy(v) + 4, "text-anchor": "end" }, String(v)));
+  }
+  svg.append(s("text", { class: "tick", x: padL + 4, y: fy(PASS_SCORE) - 4 }, "pass"));
+
+  // Cost ticks: each power of ten in range on a log axis, or quarters on a linear one
+  const ticks = [];
+  if (useLog) {
+    for (let p = Math.ceil(Math.log10(lo)); p <= Math.floor(Math.log10(hi)); p++) ticks.push(10 ** p);
+    if (ticks.length < 2) ticks.splice(0, ticks.length, lo, Math.sqrt(lo * hi), hi);
+  } else {
+    for (let i = 0; i <= 4; i++) ticks.push(lo + ((hi - lo) * i) / 4);
+  }
+  for (const t of ticks) {
+    const x = fx(t);
+    svg.append(s("line", { class: "gridline", x1: x, x2: x, y1: padT, y2: padT + plotH }));
+    svg.append(s("text", { class: "tick", x, y: padT + plotH + 16, "text-anchor": "middle" }, fmtCost(t)));
+  }
+  svg.append(s("text", { class: "axis-title", x: padL + plotW / 2, y: height - 4, "text-anchor": "middle" },
+    `Average cost per scored call${useLog ? " (log scale)" : ""}`));
+
+  // Name labels right of each dot (left near the right edge), dropped when they would overlap one already placed;
+  // every dot still has its name in the tooltip
+  const placed = [{ x: padL, y: fy(PASS_SCORE) - 15, w: 34, h: 14 }];  // the "pass" label
+  const overlaps = (r) => placed.some((p) => r.x < p.x + p.w && p.x < r.x + r.w && r.y < p.y + p.h && p.y < r.y + r.h);
+  const points = items.map((item) => ({ item, cx: fx(item.x), cy: fy(item.y) }));
+  for (const p of points) placed.push({ x: p.cx - 6, y: p.cy - 6, w: 12, h: 12 });
+  for (const { item, cx, cy } of [...points].sort((a, b) => b.item.y - a.item.y)) {
+    const w = textWidth(item.model) * (11 / 12);
+    const right = cx + 9 + w <= width;
+    const box = { x: right ? cx + 9 : cx - 9 - w, y: cy - 8, w, h: 14 };
+    if (overlaps(box)) continue;
+    placed.push(box);
+    svg.append(s("text", { class: "point-label", x: right ? cx + 9 : cx - 9, y: cy + 4, "text-anchor": right ? "start" : "end" }, item.model));
+  }
+
+  for (const { item, cx, cy } of points) {
+    const g = s("g", { class: "point" }, s("circle", { class: "dot", cx, cy, r: 5 }));
+    // Hit target bigger than the dot
+    const hit = s("circle", { class: "hit", cx, cy, r: 12, tabindex: 0, "aria-label": `${item.model}: score ${fmtScore(item.y)}, ${fmtCost(item.x)} per call` });
+    const tip = () => [item.model, `Score ${fmtScore(item.y)} / ${SCORE_MAX} · ${fmtCost(item.x)} per call`,
+      `Pass rate ${fmtPct(item.passRate)} · ${plural(item.n, "scored call")}`];
+    hit.addEventListener("mousemove", (e) => showTooltip(tip(), e.clientX, e.clientY));
+    hit.addEventListener("mouseleave", hideTooltip);
+    hit.addEventListener("focus", () => { const r = hit.getBoundingClientRect(); showTooltip(tip(), r.right, r.top); });
+    hit.addEventListener("blur", hideTooltip);
+    g.append(hit);
+    svg.append(g);
+  }
+  return svg;
 }
 
 const MAX_PLOT_WIDTH = 900;
@@ -908,7 +1113,8 @@ function runCard(run) {
   const total = Array.isArray(entry.results) ? entry.results.filter(isResult).length : rows.length;
   const errors = rows.filter((r) => r.error).length;
   const hasCost = rows.some((r) => r.totalCost != null);
-  const typeLabel = first.type === "evaluate_all_models" ? "All models" : first.type === "evaluate" ? "Single model" : first.type === "chat" ? "Chat page" : first.type;
+  const typeLabel = { evaluate_all_models: "All models", evaluate: "Single model", chat: "Chat page", batch: "Batch case" }[first.type] || first.type;
+  const scores = rows.filter((r) => !r.error && r.score != null).map((r) => r.score);
   const modelsLabel = rows.length === 1 && total === 1 ? first.model
     : rows.length === total ? plural(total, "model") : `${rows.length} of ${total} models`;
 
@@ -925,11 +1131,22 @@ function runCard(run) {
     h("span", { class: "run-time" }, fmtDate(first.date, first.timestamp)),
     h("span", { class: "badge" }, typeLabel),
     h("span", { class: "run-models" }, modelsLabel),
+    first.caseId != null ? h("span", { class: "run-models" }, `case ${first.caseId}`) : null,
     errors ? h("span", { class: "badge badge-error" }, `⚠ ${plural(errors, "error")}`) : null,
+    scores.length ? h("span", { class: "badge badge-score" },
+      `${scores.length === 1 ? "score" : "avg score"} ${scores.length === 1 ? scores[0] : fmtScore(scores.reduce((a, b) => a + b, 0) / scores.length)}/${SCORE_MAX}`) : null,
     h("span", { class: "run-cost" }, hasCost ? fmtCost(run.cost) : "—"),
   );
 
   const body = h("div", { class: "run-body" });
+  if (first.batchId != null) {
+    const filtered = state.filters.batch === first.batchId;
+    body.append(h("div", { class: "session-line" },
+      h("span", { "data-tip": "This run is one case of an evaluate_batch() batch. Every case of that batch has the same batch id.", style: "cursor: help" },
+        "Batch ", h("code", {}, first.batchId), first.caseId != null ? ` · case ${first.caseId}` : ""),
+      filtered ? null : h("button", { class: "btn-link", type: "button", "data-tip": "Filter the page to just this batch's cases. Use the Batch filter or Clear filters to go back.", onclick: () => setBatchFilter(first.batchId) }, "Show only this batch"),
+    ));
+  }
   if (first.sessionId != null) {
     // Outside the head button, as a button can't hold another one
     const filtered = state.filters.session === first.sessionId;
@@ -953,6 +1170,8 @@ function runCard(run) {
   }
   if (open) {
     if (first.system) body.append(h("div", { class: "label-sm" }, "System prompt"), h("p", { class: "prompt" }, first.system));
+    if (first.expected) body.append(h("div", { class: "label-sm" }, "Expected answer"), h("p", { class: "expected" }, first.expected));
+    if (first.rubric) body.append(h("div", { class: "label-sm" }, "Rubric"), h("p", { class: "expected" }, first.rubric));
     const single = rows.length === 1;
     body.append(h("div", { class: single ? "results single" : "results" }, rows.map((r) => resultView(r, single))));
   }
@@ -980,14 +1199,31 @@ function resultView(r, single) {
       metric("Cache cost", fmtCost((num(r.cost.cache_write_cost) || 0) + (num(r.cost.cache_read_cost) || 0))),
     );
   }
+  const scorerLabel = r.scorer === "llm_judge" ? `grader ${r.judgeModel || ""}`.trim() : r.scorer || "scorer";
+  let scoreBadge = null, grade = null;
+  if (!r.error && r.scored) {
+    if (r.score != null) {
+      const pass = r.score >= PASS_SCORE;
+      scoreBadge = h("span", { class: pass ? "badge badge-score" : "badge badge-score badge-muted", "data-tip": `Scored by ${scorerLabel}. ${PASS_SCORE} or more out of ${SCORE_MAX} is a pass.` },
+        `${r.score}/${SCORE_MAX} ${pass ? "✓ pass" : "✗ fail"}`);
+    }
+    if (r.scoreError) {
+      grade = h("div", { class: "grade failed" }, h("strong", {}, "⚠ Grading failed: "), r.scoreError);
+    } else if (r.reasoning || r.judgeCost != null) {
+      grade = h("div", { class: "grade" }, h("strong", {}, "Grader: "), r.reasoning || "(no reasoning)",
+        r.judgeCost != null ? ` · ${fmtCost(r.judgeCost)} to grade` : "");
+    }
+  }
   return h("article", { class: "result" },
     h("div", { class: "result-head" },
       h("strong", {}, r.model),
+      scoreBadge,
       r.stopReason && !NORMAL_STOPS.has(r.stopReason) ? h("span", { class: "badge" }, r.stopReason) : null),
     r.error ? null : h("dl", { class: "metrics" }, metrics),
     r.error
       ? h("div", { class: "error-box", role: "note" }, h("strong", {}, "⚠ Error: "), r.error)
-      : h("div", { class: "response" }, r.response || "(empty response)"));
+      : h("div", { class: "response" }, r.response || "(empty response)"),
+    grade);
 }
 
 // ---------- CSV export ----------
@@ -1018,6 +1254,16 @@ const CSV_COLUMNS = [
   ["cache_read_cost", (r) => r.cost && r.cost.cache_read_cost],
   ["total_cost", (r) => r.totalCost],
   ["error", (r) => r.error],
+  ["batch_id", (r) => r.batchId],
+  ["case_id", (r) => r.caseId],
+  ["expected", (r) => r.expected],
+  ["rubric", (r) => r.rubric],
+  ["score", (r) => r.score],
+  ["scorer", (r) => r.scorer],
+  ["judge_model", (r) => r.judgeModel],
+  ["judge_cost", (r) => r.judgeCost],
+  ["score_reasoning", (r) => r.reasoning],
+  ["score_error", (r) => r.scoreError],
   ["response", (r) => r.response],
 ];
 
@@ -1083,6 +1329,7 @@ function bindFilter(id, key, event) {
 bindFilter("#f-text", "text", "input");
 bindFilter("#f-type", "type", "change");
 $("#f-session").addEventListener("change", (e) => setSessionFilter(e.target.value));
+$("#f-batch").addEventListener("change", (e) => setBatchFilter(e.target.value));
 $("#f-provider").addEventListener("change", (e) => {
   state.filters.provider = e.target.value;
   state.runLimit = 50;
@@ -1094,11 +1341,12 @@ bindFilter("#f-from", "from", "change");
 bindFilter("#f-to", "to", "change");
 
 $("#f-clear").addEventListener("click", () => {
-  state.filters = { text: "", type: "all", session: "all", provider: "all", status: "all", from: "", to: "" };
+  state.filters = { text: "", type: "all", session: "all", batch: "all", provider: "all", status: "all", from: "", to: "" };
   state.excludedModels.clear();
   $("#f-text").value = "";
   $("#f-type").value = "all";
   $("#f-session").value = "all";
+  $("#f-batch").value = "all";
   syncSessionUrl();
   $("#f-provider").value = "all";
   $("#f-status").value = "all";
