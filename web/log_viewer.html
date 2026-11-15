@@ -440,13 +440,15 @@ function systemText(s) {
 // Last resort for entries logged before results recorded a provider, when no other result for the model recorded one.
 // This copies only the name-prefix fallback in evaluation.provider_for, so keep the two in step.
 function inferProvider(model) {
+  // OpenRouter ids are "vendor/model", so "openai/gpt-oss-120b" is OpenRouter's, not OpenAI's
+  if (model.includes("/")) return "openrouter";
   if (model.startsWith("claude-")) return "anthropic";
   if (/^(gpt-|o1|o3|o4)/.test(model)) return "openai";
   return "unknown";
 }
 
 // Stop reasons that mean the model finished normally, so no badge is shown
-const NORMAL_STOPS = new Set(["end_turn", "completed"]);
+const NORMAL_STOPS = new Set(["end_turn", "completed", "stop"]);  // Anthropic, OpenAI, OpenRouter
 
 function parseLog(text) {
   if (!text.trim()) return [];
@@ -744,7 +746,7 @@ function setBatchFilter(id) {
   render();
 }
 
-const PROVIDER_LABELS = { anthropic: "Anthropic", openai: "OpenAI" };
+const PROVIDER_LABELS = { anthropic: "Anthropic", openai: "OpenAI", openrouter: "OpenRouter" };
 
 // One option per provider in the log, so providers added later (and "unknown") can be picked too
 function renderProviderFilter() {
@@ -852,7 +854,7 @@ function renderTiles(rows, runCount) {
   $("#tiles").replaceChildren(
     tile("Runs", runCount.toLocaleString(), "How many logged runs have at least one call matching the filters. A run is one evaluate() call, one evaluate_all_models() comparison or one chat page turn."),
     tile("Model calls", rows.length.toLocaleString(), "How many individual model calls match the filters. A comparison across 5 models is one run but 5 calls."),
-    tile("Total spend", fmtCost(costs.length ? spend : null), "The estimated cost of every matching call added together, from the prices in MODEL_PRICING. Calls to unpriced models aren't counted."),
+    tile("Total spend", fmtCost(costs.length ? spend : null), "The cost of every matching call added together: estimated from the prices in MODEL_PRICING, or for OpenRouter models what OpenRouter reports it charged. Calls with no cost aren't counted."),
     tile("Avg cost per call", fmtCost(costs.length ? spend / costs.length : null), "Total spend divided by the number of matching calls that have a cost estimate."),
     tile("Errors", errors.toLocaleString(), "How many matching calls failed, for example because a model was unavailable or the request was rejected."),
   );

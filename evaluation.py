@@ -12,13 +12,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import AnthropicAPI
 import OpenAIAPI
+import OpenRouterAPI
 
 SPACER = "--------------------------"
 
-# Each provider module exposes the same interface: MODEL_PRICING, chat(), text_from_response() and stop_reason()
+# Each provider module exposes the same interface: MODEL_PRICING, chat(), text_from_response() and stop_reason().
+# A module may also have configured(); default_models() leaves it out while that returns False (e.g. no API key).
 PROVIDERS = {
     "anthropic": AnthropicAPI,
     "openai": OpenAIAPI,
+    "openrouter": OpenRouterAPI,
 }
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,15 +35,25 @@ def provider_for(model):
         if model in provider.MODEL_PRICING:
             return name
     # Unpriced models still run (with no cost estimate) if the name says which provider they belong to.
-    # web/log_viewer.html copies these prefixes in inferProvider, so keep the two in step.
+    # web/log_viewer.html copies these rules in inferProvider, so keep the two in step.
+    # OpenRouter ids are "vendor/model", so a "/" is checked first: "openai/gpt-oss-120b" is OpenRouter's, not OpenAI's.
+    if "/" in model:
+        return "openrouter"
     if model.startswith("claude-"):
         return "anthropic"
     if model.startswith(("gpt-", "o1", "o3", "o4")):
         return "openai"
     raise ValueError(f"Can't tell which provider model '{model}' belongs to")
 
+def _configured(name):
+    check = getattr(PROVIDERS[name], "configured", None)
+    return check() if check else True
+
 def default_models(providers=None):
-    return [model for name in (providers or PROVIDERS) for model in PROVIDERS[name].MODEL_PRICING]
+    # Every priced model of the given providers. With none given, providers that aren't configured are left out,
+    # so default runs don't fail on them; naming a provider includes it either way (its calls then fail clearly).
+    names = providers or [name for name in PROVIDERS if _configured(name)]
+    return [model for name in names for model in PROVIDERS[name].MODEL_PRICING]
 
 # Attachments travel in one provider-neutral shape, {"type", "name", "media_type", "data"}, and each provider's
 # user_content() turns them into its own content blocks. Images and PDFs are base64; text files are plain text.

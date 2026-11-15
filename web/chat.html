@@ -97,7 +97,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .locked-note { font-size: 12px; color: var(--text-muted); margin: -4px 0 8px; }
 .provider { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 0; }
 .provider + .provider { border-top: 1px solid var(--border); }
-.provider-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); min-width: 76px; text-transform: capitalize; }
+.provider-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); min-width: 76px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: pointer; font-size: 13px; background: var(--bg); }
 .chip input { margin: 0; accent-color: var(--accent); }
 .chip:has(input:disabled) { cursor: not-allowed; color: var(--text-muted); }
@@ -244,7 +244,7 @@ button, input, textarea { font: inherit; color: inherit; }
         <div class="attach-row">
           <button type="button" id="context-add" class="btn" data-tip="Add images, PDFs or text files as context for the whole conversation. You can also drop files on this area. They share the 20 MB conversation limit with attachments.">Add context files</button>
           <input type="file" id="context-input" multiple hidden>
-          <span class="hint" tabindex="0" data-tip="Context files are resent on every turn, like the rest of the conversation. Claude models cache them: the first turn pays a little more than the normal input price for them (a cache write) and later turns pay the much lower cache-read price, as long as turns are less than 5 minutes apart. OpenAI models cache them automatically. Small files may be below a model's minimum and not cached. You can send the first message with no text, to send just the context files.">Drop files here · resent every turn</span>
+          <span class="hint" tabindex="0" data-tip="Context files are resent on every turn, like the rest of the conversation. Claude models cache them: the first turn pays a little more than the normal input price for them (a cache write) and later turns pay the much lower cache-read price, as long as turns are less than 5 minutes apart. OpenAI models cache them automatically, as do most OpenRouter models. Small files may be below a model's minimum and not cached. You can send the first message with no text, to send just the context files.">Drop files here · resent every turn</span>
         </div>
         <div id="context-files" class="attachments" aria-label="Context files for this conversation"></div>
       </div>
@@ -512,7 +512,7 @@ function renderModels() {
   const root = $("models");
   root.replaceChildren();
   for (const [provider, models] of byProvider) {
-    const row = el("div", { class: "provider" }, el("span", { class: "provider-name", text: provider }));
+    const row = el("div", { class: "provider" }, el("span", { class: "provider-name", text: providerLabel(provider) }));
     for (const model of models) {
       // Every model starts checked
       const box = el("input", { type: "checkbox", "data-model": model, "data-provider": provider });
@@ -520,8 +520,8 @@ function renderModels() {
       row.append(el("label", { class: "chip" }, box, model));
     }
     row.append(
-      el("button", { type: "button", class: "btn-link", "data-select": "all", "data-provider": provider, "data-tip": `Check every ${provider} model.`, text: "All" }),
-      el("button", { type: "button", class: "btn-link", "data-select": "none", "data-provider": provider, "data-tip": `Uncheck every ${provider} model.`, text: "None" }),
+      el("button", { type: "button", class: "btn-link", "data-select": "all", "data-provider": provider, "data-tip": `Check every ${providerLabel(provider)} model.`, text: "All" }),
+      el("button", { type: "button", class: "btn-link", "data-select": "none", "data-provider": provider, "data-tip": `Uncheck every ${providerLabel(provider)} model.`, text: "None" }),
     );
     root.append(row);
   }
@@ -631,17 +631,21 @@ function startTurn(turn, prompt, attachments) {
   if (shown) shown.current.turnEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
+// Provider ids as written in the page; an unknown one is shown as it is
+const PROVIDER_LABELS = { anthropic: "Anthropic", openai: "OpenAI", openrouter: "OpenRouter" };
+const providerLabel = (p) => PROVIDER_LABELS[p] || p;
+
 // What each per-turn figure means, shown when hovering over its label
 const META_TIPS = {
-  "Provider": "The company whose API served this model.",
+  "Provider": "The API that served this model. OpenRouter routes open-weight models to one of several hosting companies.",
   "Time": "Seconds from sending the request to receiving the whole reply.",
-  "Stop reason": "Why the model stopped. end_turn (Anthropic) and completed (OpenAI) mean it finished normally; anything else, such as max_tokens, means the reply was cut short.",
+  "Stop reason": "Why the model stopped. end_turn (Anthropic), completed (OpenAI) and stop (OpenRouter) mean it finished normally; anything else, such as max_tokens or length, means the reply was cut short.",
   "Input tokens": "Tokens sent that weren't read from the cache: the system prompt, this model's earlier turns and your new message. It grows every turn because the whole history is resent.",
   "Output tokens": "Tokens the model wrote. Output costs several times more per token than input.",
-  "of which reasoning": "OpenAI only: tokens the model spent thinking before answering. They're already counted in Output tokens and billed as output.",
+  "of which reasoning": "OpenAI and OpenRouter models: tokens the model spent thinking before answering. They're already counted in Output tokens and billed as output.",
   "Cache read": "Input tokens served from the provider's prompt cache, charged at a much lower rate.",
   "Cache write": "Input tokens written to the prompt cache for later turns, charged a little above the normal input rate.",
-  "Call cost": "The estimated cost of this one call, from the prices in MODEL_PRICING.",
+  "Call cost": "The cost of this one call: estimated from the prices in MODEL_PRICING, or for OpenRouter models what OpenRouter reports it charged.",
   "Model's session cost": "Everything this model has cost in this conversation so far, this call included.",
 };
 
@@ -701,7 +705,7 @@ function fillTurn(result) {
     children.push(el("p", { class: "not-kept", text: "This turn isn't part of the conversation sent on the next turn." }));
   }
   const meta = el("div", { class: "meta" },
-    metaItem("Provider", result.provider || "?"),
+    metaItem("Provider", result.provider ? providerLabel(result.provider) : "?"),
     metaItem("Time", `${result.seconds.toFixed(2)} s`),
   );
   if (!result.error) {
