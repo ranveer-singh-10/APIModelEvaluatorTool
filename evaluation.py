@@ -329,6 +329,45 @@ def log_evaluation(kind, prompt, system, results, log_file=LOG_FILE, session_id=
     print(f"Logged to {log_file}")
     return entry
 
+MANUAL_NOTE_MAX = 2000
+
+def set_manual_score(entry_index, timestamp, model, value, note=None, log_file=LOG_FILE):
+    # Grades one logged result by hand: value 1-5, or None to clear the manual grade. The entry is found by its index
+    # in the log and must still have this timestamp, so a log that changed since it was read is refused (LookupError)
+    # rather than grading the wrong result. A manual grade replaces the result's score and keeps the automatic score it
+    # replaced under "previous"; grading again keeps that original, and clearing puts it back (or leaves no score).
+    # Returns the updated result.
+    if value is not None and (type(value) is not int or not SCORE_MIN <= value <= SCORE_MAX):
+        raise ValueError(f"a manual grade must be a whole number from {SCORE_MIN} to {SCORE_MAX}")
+    if note is not None and (not isinstance(note, str) or len(note) > MANUAL_NOTE_MAX):
+        raise ValueError(f"the note must be text of at most {MANUAL_NOTE_MAX} characters")
+    note = (note or "").strip() or None
+    with _log_lock:
+        entries = _read_log(log_file)
+        if (type(entry_index) is not int or not 0 <= entry_index < len(entries)
+                or not isinstance(entries[entry_index], dict) or entries[entry_index].get("timestamp") != timestamp):
+            raise LookupError("that run isn't where it was in the log, which has changed since it was loaded: reload it")
+        matches = [r for r in entries[entry_index].get("results") or [] if isinstance(r, dict) and r.get("model") == model]
+        if len(matches) != 1:
+            raise LookupError(f"the run has no single result for {model}: reload the log")
+        result = matches[0]
+        if result.get("error"):
+            raise ValueError("a failed call has no response to grade")
+        current = result.get("score")
+        manual = isinstance(current, dict) and current.get("scorer") == "manual"
+        original = current.get("previous") if manual else current
+        if value is None:
+            # Back to the automatic score, or to no score key at all, as the result was before it was graded
+            if original is None:
+                result.pop("score", None)
+            else:
+                result["score"] = original
+        else:
+            result["score"] = {"value": value, "scorer": "manual", "reasoning": note, "judge_model": None,
+                               "judge_usage": None, "error": None, "previous": original}
+        _write_log(entries, log_file)
+    return result
+
 def _scoring_fields(expected, rubric, scorer, judge_model):
     # What a scored run's log entry records about how it was scored
     return {"expected": expected, "rubric": rubric, "scorer": scorer,
@@ -645,21 +684,56 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def do_POST(self):
-        if self.path.split("?")[0] != "/run":
-            self.send_error(404)
-            return
-        # /run makes billed calls, so only this server's own pages may use it. A page on another site can still
-        # send a POST to localhost: its Origin won't match, and a JSON body needs a preflight we never answer.
-        # Checking Host as well stops a DNS-rebinding site that points its own name at 127.0.0.1.
+    # /score only edits the log, so its body is small
+    max_score_body_bytes = 100_000
+
+    def _from_own_page(self):
+        # /run makes billed calls and /score edits the log, so only this server's own pages may use them. A page on
+        # another site can still send a POST to localhost: its Origin won't match, and a JSON body needs a preflight
+        # we never answer. Checking Host as well stops a DNS-rebinding site that points its own name at 127.0.0.1.
         port = self.server.server_address[1]
         own = {f"127.0.0.1:{port}", f"localhost:{port}"}
-        if (self.headers.get("Host") not in own
-                or self.headers.get("Origin") not in {f"http://{h}" for h in own}
-                or self.headers.get_content_type() != "application/json"):
+        return (self.headers.get("Host") in own
+                and self.headers.get("Origin") in {f"http://{h}" for h in own}
+                and self.headers.get_content_type() == "application/json")
+
+    def do_POST(self):
+        path = self.path.split("?")[0]
+        if path not in ("/run", "/score"):
+            self.send_error(404)
+            return
+        if not self._from_own_page():
             self.send_error(403)
             return
+        if path == "/score":
+            self._score()
+        else:
+            self._run()
 
+    def _score(self):
+        # A manual grade from the log viewer: {entry, timestamp, model, value (1-5 or null to clear), note}
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= self.max_score_body_bytes:
+                raise ValueError("missing or oversized body")
+            body = json.loads(self.rfile.read(length))
+            if not isinstance(body, dict) or not isinstance(body.get("model"), str) or not isinstance(body.get("timestamp"), str):
+                raise ValueError("expected entry, timestamp, model, value and note")
+            result = set_manual_score(body.get("entry"), body["timestamp"], body["model"], body.get("value"),
+                                      body.get("note"), log_file=self.log_file)
+        except LookupError as e:
+            self.send_error(409, str(e))
+            return
+        except (ValueError, TypeError) as e:
+            self.send_error(400, str(e))
+            return
+        except OSError as e:
+            self.send_error(500, f"couldn't write the log: {e}")
+            return
+        self._send_bytes(json.dumps({"result": result}, ensure_ascii=False, default=str).encode("utf-8"),
+                         "application/json; charset=utf-8")
+
+    def _run(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
             if length <= 0:

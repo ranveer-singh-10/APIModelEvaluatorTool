@@ -187,6 +187,21 @@ tbody tr:last-child td { border-bottom: none; }
 .grade strong { color: var(--text-primary); }
 .grade.failed { color: var(--critical); }
 .expected { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.grading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; font-size: 12px; }
+.grading-label { color: var(--text-secondary); }
+.grade-btns { display: inline-flex; gap: 4px; }
+.grade-btn {
+  min-width: 30px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  cursor: pointer; font-variant-numeric: tabular-nums; font-weight: 600;
+}
+.grade-btn:hover:not(:disabled) { background: var(--surface-2); }
+.grade-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.grade-btn:disabled, .grade-note:disabled { opacity: 0.5; cursor: not-allowed; }
+.grade-note {
+  flex: 1 1 140px; min-width: 0; border: 1px solid var(--border); background: var(--surface); border-radius: 6px;
+  padding: 4px 8px; font-size: 12px; color: var(--text-primary);
+}
+.grading .btn-link { font-size: 12px; padding: 0; }
 .error-box { border-radius: 8px; padding: 8px 10px; background: var(--critical-bg); color: var(--critical); overflow-wrap: anywhere; }
 .empty { color: var(--text-secondary); padding: 8px 0; }
 
@@ -262,6 +277,14 @@ tbody tr:last-child td { border-bottom: none; }
       <label class="field" data-tip="Show only one provider's models. The model checkboxes below then list just that provider's models.">Provider
         <select id="f-provider">
           <option value="all">All</option>
+        </select>
+      </label>
+      <label class="field" data-tip="Unscored: successful calls with no score yet, to work through grading them. Manually graded: calls you graded on this page. Grader disagrees: calls where your grade and the grader's differ by 2 or more.">Scoring
+        <select id="f-scoring">
+          <option value="all">All</option>
+          <option value="unscored">Unscored</option>
+          <option value="manual">Manually graded</option>
+          <option value="disagree">Grader disagrees</option>
         </select>
       </label>
       <label class="field" data-tip="Show only calls that succeeded, or only calls that failed with an error.">Status
@@ -372,12 +395,15 @@ const state = {
   modelProvider: new Map(),
   source: "",
   excludedModels: new Set(),
-  filters: { text: "", type: "all", session: "all", batch: "all", provider: "all", status: "all", from: "", to: "" },
+  filters: { text: "", type: "all", session: "all", batch: "all", scoring: "all", provider: "all", status: "all", from: "", to: "" },
   modelSort: { key: null, dir: 1 },
   runSort: "newest",
   expanded: new Set(),
   runLimit: 50,
   chartData: [],
+  // Manual grades are saved through the server, so only a log it served can be graded
+  fromServer: false,
+  saving: false,
 };
 
 // ---------- Loading ----------
@@ -453,28 +479,53 @@ const PASS_SCORE = 4;
 const fmtScore = (v) => (v == null ? "—" : v.toFixed(2));
 const fmtPct = (v) => (v == null ? "—" : Math.round(v * 100) + "%");
 
-// A result's score as logged: {value, scorer, reasoning, judge_model, judge_usage, error}, or null when it wasn't scored
+const validScore = (v) => (v != null && Number.isInteger(v) && v >= 1 && v <= SCORE_MAX ? v : null);
+const judgeCostOf = (sc) => {
+  const ju = sc && sc.judge_usage && typeof sc.judge_usage === "object" ? sc.judge_usage : null;
+  return ju && ju.cost ? num(ju.cost.total_cost) : null;
+};
+
+// A result's score as logged: {value, scorer, reasoning, judge_model, judge_usage, error}, or null when it wasn't scored.
+// A manual grade (scorer "manual", set from this page) keeps the automatic score it replaced under "previous".
 function scoreFields(sc) {
-  if (!sc || typeof sc !== "object") return { score: null, scored: false, scorer: null, reasoning: "", scoreError: null, judgeModel: null, judgeCost: null };
-  const value = num(sc.value);
-  const ju = sc.judge_usage && typeof sc.judge_usage === "object" ? sc.judge_usage : null;
+  if (!sc || typeof sc !== "object") return {
+    score: null, scored: false, scorer: null, reasoning: "", scoreError: null, judgeModel: null, judgeCost: null,
+    manual: false, note: "", graderScore: null, graderScorer: null, graderReasoning: "",
+  };
+  const manual = sc.scorer === "manual";
+  const prev = manual && sc.previous && typeof sc.previous === "object" ? sc.previous : null;
+  // The grader that scored the result: the replaced score for a manual grade, else the score itself
+  const auto = manual ? prev : sc;
   return {
-    score: value != null && value >= 1 && value <= SCORE_MAX ? value : null,
+    score: validScore(num(sc.value)),
     scored: true,
     scorer: str(sc.scorer, null),
-    reasoning: str(sc.reasoning, ""),
-    scoreError: str(sc.error, null),
-    judgeModel: str(sc.judge_model, null),
-    judgeCost: ju && ju.cost ? num(ju.cost.total_cost) : null,
+    reasoning: manual ? "" : str(sc.reasoning, ""),
+    scoreError: manual ? null : str(sc.error, null),
+    judgeModel: auto ? str(auto.judge_model, null) : null,
+    // A grade that was overridden still cost what the grader charged for it
+    judgeCost: judgeCostOf(auto),
+    manual,
+    note: manual ? str(sc.reasoning, "") : "",
+    graderScore: manual && prev ? validScore(num(prev.value)) : null,
+    graderScorer: manual && prev ? str(prev.scorer, null) : null,
+    graderReasoning: manual && prev ? str(prev.reasoning, "") : "",
   };
 }
 
-function loadEntries(data, source) {
+// Your grade and the grader's differ by this much or more for the "Grader disagrees" filter
+const DISAGREE_BY = 2;
+const disagrees = (r) => r.manual && r.score != null && r.graderScore != null && Math.abs(r.score - r.graderScore) >= DISAGREE_BY;
+
+// keepView (after a manual grade) keeps the open cards and how many runs are shown
+function loadEntries(data, source, keepView) {
   if (!Array.isArray(data)) throw new Error("The log should be a JSON array of runs.");
   state.entries = data;
   state.source = source;
-  state.expanded.clear();
-  state.runLimit = 50;
+  if (!keepView) {
+    state.expanded.clear();
+    state.runLimit = 50;
+  }
   state.rows = [];
   state.modelOrder = [];
 
@@ -500,6 +551,8 @@ function loadEntries(data, source) {
       state.rows.push({
         runId,
         timestamp: str(e.timestamp, ""),
+        // The exact logged value, sent back with a manual grade so the server can check it grades the right run
+        rawTimestamp: typeof e.timestamp === "string" ? e.timestamp : null,
         date: date && !isNaN(date) ? date : null,
         type: str(e.type, "unknown"),
         // A chat page conversation: every turn of one conversation shares its session_id
@@ -533,7 +586,7 @@ function loadEntries(data, source) {
   // Rows are in log order, so each model ends up with its newest provider, as in `known`
   for (const r of state.rows) state.modelProvider.set(r.model, r.provider);
 
-  hideNotice();
+  if (!keepView) hideNotice();
   if (!data.length) showNotice("The log is empty. Run evaluate(...), evaluate_all_models(...) or evaluate_batch(...) with log=True, then press Reload.");
   renderSessionFilter();
   renderBatchFilter();
@@ -552,7 +605,9 @@ async function loadFromServer() {
   try {
     const res = await fetch("log.json", { cache: "no-store" });
     if (!res.ok) throw new Error(`The server returned HTTP ${res.status}.`);
-    loadEntries(parseLog(await res.text()), "Served by view_logs()");
+    const data = parseLog(await res.text());
+    state.fromServer = true;
+    loadEntries(data, "Served by view_logs()");
   } catch (err) {
     showNotice(`Couldn't load the log: ${err.message} Make sure view_logs() is still running, or use Open log file.`, true);
   }
@@ -562,7 +617,9 @@ function loadFromFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      loadEntries(parseLog(String(reader.result)), file.name);
+      const data = parseLog(String(reader.result));
+      state.fromServer = false;
+      loadEntries(data, file.name);
     } catch (err) {
       showNotice(err.message, true);
     }
@@ -591,6 +648,9 @@ function filteredRows() {
     if (f.type !== "all" && r.type !== f.type) return false;
     if (f.session !== "all" && r.sessionId !== f.session) return false;
     if (f.batch !== "all" && r.batchId !== f.batch) return false;
+    if (f.scoring === "unscored" && (r.error || r.score != null)) return false;
+    if (f.scoring === "manual" && !r.manual) return false;
+    if (f.scoring === "disagree" && !disagrees(r)) return false;
     if (f.provider !== "all" && r.provider !== f.provider) return false;
     if (f.status === "ok" && r.error) return false;
     if (f.status === "error" && !r.error) return false;
@@ -601,7 +661,7 @@ function filteredRows() {
       if (f.to && d > f.to) return false;
     }
     if (q && ![r.prompt, r.system, r.response, r.error || "", r.model, r.provider, r.sessionId || "", r.batchId || "", r.caseId || "",
-      r.expected, r.rubric, r.reasoning, r.attachments.join(" "), r.contextFiles.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
+      r.expected, r.rubric, r.reasoning, r.note, r.graderReasoning, r.attachments.join(" "), r.contextFiles.join(" ")].some((t) => t.toLowerCase().includes(q))) return false;
     return true;
   });
 }
@@ -1199,31 +1259,110 @@ function resultView(r, single) {
       metric("Cache cost", fmtCost((num(r.cost.cache_write_cost) || 0) + (num(r.cost.cache_read_cost) || 0))),
     );
   }
-  const scorerLabel = r.scorer === "llm_judge" ? `grader ${r.judgeModel || ""}`.trim() : r.scorer || "scorer";
-  let scoreBadge = null, grade = null;
+  const labelFor = (scorer) => (scorer === "llm_judge" ? `the grader ${r.judgeModel || ""}`.trim() : scorer || "a scorer");
+  const scorerLabel = r.manual ? "you, on this page" : labelFor(r.scorer);
+  const graded = [];
+  let scoreBadge = null, graderBadge = null;
   if (!r.error && r.scored) {
     if (r.score != null) {
       const pass = r.score >= PASS_SCORE;
       scoreBadge = h("span", { class: pass ? "badge badge-score" : "badge badge-score badge-muted", "data-tip": `Scored by ${scorerLabel}. ${PASS_SCORE} or more out of ${SCORE_MAX} is a pass.` },
-        `${r.score}/${SCORE_MAX} ${pass ? "✓ pass" : "✗ fail"}`);
+        `${r.manual ? "You: " : ""}${r.score}/${SCORE_MAX} ${pass ? "✓ pass" : "✗ fail"}`);
     }
+    if (r.manual && r.graderScore != null) {
+      graderBadge = h("span", { class: disagrees(r) ? "badge badge-error" : "badge badge-muted",
+        "data-tip": `What ${labelFor(r.graderScorer)} scored before your grade replaced it.${disagrees(r) ? ` You and the grader differ by ${DISAGREE_BY} or more.` : ""}` },
+        `${r.graderScorer === "llm_judge" ? "grader" : r.graderScorer || "was"} ${r.graderScore}/${SCORE_MAX}`);
+    }
+    if (r.manual && r.note) graded.push(h("div", { class: "grade" }, h("strong", {}, "Your note: "), r.note));
+    const reasoning = r.manual ? r.graderReasoning : r.reasoning;
     if (r.scoreError) {
-      grade = h("div", { class: "grade failed" }, h("strong", {}, "⚠ Grading failed: "), r.scoreError);
-    } else if (r.reasoning || r.judgeCost != null) {
-      grade = h("div", { class: "grade" }, h("strong", {}, "Grader: "), r.reasoning || "(no reasoning)",
-        r.judgeCost != null ? ` · ${fmtCost(r.judgeCost)} to grade` : "");
+      graded.push(h("div", { class: "grade failed" }, h("strong", {}, "⚠ Grading failed: "), r.scoreError));
+    } else if (reasoning || r.judgeCost != null) {
+      graded.push(h("div", { class: "grade" }, h("strong", {}, "Grader: "), reasoning || "(no reasoning)",
+        r.judgeCost != null ? ` · ${fmtCost(r.judgeCost)} to grade` : ""));
     }
   }
+  if (!r.error) graded.push(gradingControls(r));
   return h("article", { class: "result" },
     h("div", { class: "result-head" },
       h("strong", {}, r.model),
       scoreBadge,
+      graderBadge,
       r.stopReason && !NORMAL_STOPS.has(r.stopReason) ? h("span", { class: "badge" }, r.stopReason) : null),
     r.error ? null : h("dl", { class: "metrics" }, metrics),
     r.error
       ? h("div", { class: "error-box", role: "note" }, h("strong", {}, "⚠ Error: "), r.error)
       : h("div", { class: "response" }, r.response || "(empty response)"),
-    grade);
+    graded);
+}
+
+// ---------- Manual grading ----------
+// 1-5 buttons and a note on every successful result. A click saves straight away through POST /score
+// (evaluation.set_manual_score), which keeps the grader's score under "previous" and checks the run is still where
+// the page saw it in the log.
+
+const gradeKey = (r) => `${r.runId}:${r.model}`;
+
+function gradingControls(r) {
+  const can = state.fromServer && r.rawTimestamp != null;
+  const why = !state.fromServer
+    ? "Grading saves to the log through the server, so it only works when the log is served by view_logs(), not opened from a file."
+    : r.rawTimestamp == null ? "This run has no timestamp in the log, so it can't be graded safely." : null;
+  const mine = r.manual ? r.score : null;
+  const note = h("input", {
+    type: "text", class: "grade-note", maxlength: 2000, placeholder: "Note (optional)", value: r.note || "", disabled: !can || null,
+    "aria-label": `Note for your grade of ${r.model}`,
+    "data-tip": "Why you gave this grade. It is saved with the grade when you click a number, or press Enter here to save a changed note with your current grade.",
+    onkeydown: (e) => { if (e.key === "Enter" && mine != null) saveGrade(r, mine, e.target.value); },
+  });
+  const buttons = [1, 2, 3, 4, 5].map((v) => h("button", {
+    type: "button", class: "grade-btn", "aria-pressed": String(mine === v), disabled: !can || null,
+    "data-grade-key": `${gradeKey(r)}:${v}`,
+    "data-tip": why || `Grade this response ${v}/${SCORE_MAX}${v >= PASS_SCORE ? " (a pass)" : " (a fail)"}. Your grade replaces the grader's in every total; the grader's score is kept and shown beside yours.`,
+    onclick: () => saveGrade(r, v, note.value),
+  }, String(v)));
+  return h("div", { class: "grading" },
+    // Disabled buttons may not get hover events, so the reason grading is off is on the label too
+    h("span", { class: "grading-label", "data-tip": why || `Grade the response yourself, 1-${SCORE_MAX}. ${PASS_SCORE} or more is a pass.`, style: "cursor: help" }, "Your grade"),
+    h("span", { class: "grade-btns", role: "group", "aria-label": `Your grade for ${r.model}` }, buttons),
+    note,
+    mine != null ? h("button", {
+      type: "button", class: "btn-link", disabled: !can || null,
+      "data-tip": r.graderScore != null || r.graderScorer ? "Remove your grade and go back to the grader's score." : "Remove your grade; the result goes back to unscored.",
+      onclick: () => saveGrade(r, null, ""),
+    }, "Clear my grade") : null,
+  );
+}
+
+async function saveGrade(r, value, note) {
+  if (state.saving) return;
+  state.saving = true;
+  try {
+    const res = await fetch("score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entry: r.runId, timestamp: r.rawTimestamp, model: r.model, value, note: note || null }),
+    });
+    if (res.status === 409) {
+      await loadFromServer();
+      showNotice(`The log changed since it was loaded (${res.statusText}), so it has been reloaded. Grade the response again.`, true);
+      return;
+    }
+    if (!res.ok) throw new Error(res.statusText || `HTTP ${res.status}`);
+    const { result } = await res.json();
+    // Put the saved result in place and rebuild the rows, keeping the open cards
+    const entry = state.entries[r.runId];
+    entry.results = entry.results.map((x) => (isResult(x) && x.model === r.model ? result : x));
+    loadEntries(state.entries, state.source, true);
+    hideNotice();
+    const again = document.querySelector(`[data-grade-key="${CSS.escape(`${gradeKey(r)}:${value ?? 1}`)}"]`);
+    if (again) again.focus({ preventScroll: true });
+  } catch (err) {
+    showNotice(`Couldn't save the grade: ${err.message}`, true);
+  } finally {
+    state.saving = false;
+  }
 }
 
 // ---------- CSV export ----------
@@ -1264,6 +1403,9 @@ const CSV_COLUMNS = [
   ["judge_cost", (r) => r.judgeCost],
   ["score_reasoning", (r) => r.reasoning],
   ["score_error", (r) => r.scoreError],
+  ["manual_score", (r) => (r.manual ? r.score : null)],
+  ["grader_score", (r) => (r.manual ? r.graderScore : r.score)],
+  ["manual_note", (r) => r.note],
   ["response", (r) => r.response],
 ];
 
@@ -1337,16 +1479,18 @@ $("#f-provider").addEventListener("change", (e) => {
   render();
 });
 bindFilter("#f-status", "status", "change");
+bindFilter("#f-scoring", "scoring", "change");
 bindFilter("#f-from", "from", "change");
 bindFilter("#f-to", "to", "change");
 
 $("#f-clear").addEventListener("click", () => {
-  state.filters = { text: "", type: "all", session: "all", batch: "all", provider: "all", status: "all", from: "", to: "" };
+  state.filters = { text: "", type: "all", session: "all", batch: "all", scoring: "all", provider: "all", status: "all", from: "", to: "" };
   state.excludedModels.clear();
   $("#f-text").value = "";
   $("#f-type").value = "all";
   $("#f-session").value = "all";
   $("#f-batch").value = "all";
+  $("#f-scoring").value = "all";
   syncSessionUrl();
   $("#f-provider").value = "all";
   $("#f-status").value = "all";
