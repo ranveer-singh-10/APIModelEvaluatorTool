@@ -8771,5 +8771,155 @@
         }
       }
     ]
+  },
+  {
+    "timestamp": "2026-11-15T22:02:47.683163+00:00",
+    "type": "chat",
+    "prompt": "what is 5+5*5",
+    "system": null,
+    "total_cost": 3.7500000000000003e-05,
+    "session_id": "422c6ac0",
+    "turn": 1,
+    "session_total_cost": 3.7500000000000003e-05,
+    "results": [
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 1.2895275999908336,
+        "stop_reason": "end_turn",
+        "response": "Using standard order of operations (multiplication before addition):\n\n5 + 5 × 5 = 5 + 25 = **30**",
+        "usage": {
+          "input_tokens": 16,
+          "output_tokens": 42,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 58,
+          "cost": {
+            "input_cost": 1.6000000000000001e-06,
+            "output_cost": 2.1e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 2.26e-05
+          }
+        },
+        "error": null,
+        "score": {
+          "value": 5,
+          "scorer": "manual",
+          "reasoning": null,
+          "judge_model": null,
+          "judge_usage": null,
+          "error": null,
+          "previous": null
+        }
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 4.735724500002107,
+        "stop_reason": "completed",
+        "response": "30",
+        "usage": {
+          "input_tokens": 14,
+          "output_tokens": 27,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 20,
+          "total_tokens": 41,
+          "cost": {
+            "input_cost": 1.4000000000000001e-06,
+            "output_cost": 1.35e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 1.49e-05
+          }
+        },
+        "error": null,
+        "score": {
+          "value": 5,
+          "scorer": "manual",
+          "reasoning": null,
+          "judge_model": null,
+          "judge_usage": null,
+          "error": null,
+          "previous": null
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-11-15T22:03:08.015741+00:00",
+    "type": "chat",
+    "prompt": "now add 1",
+    "system": null,
+    "total_cost": 7.23e-05,
+    "session_id": "422c6ac0",
+    "turn": 2,
+    "session_total_cost": 0.0001098,
+    "results": [
+      {
+        "model": "claude-haiku-5-5",
+        "provider": "anthropic",
+        "seconds": 1.563866100012092,
+        "stop_reason": "end_turn",
+        "response": "5 + 5 × 5 + 1 = 5 + 25 + 1 = **31**",
+        "usage": {
+          "input_tokens": 64,
+          "output_tokens": 92,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "total_tokens": 156,
+          "cost": {
+            "input_cost": 6.4000000000000006e-06,
+            "output_cost": 4.6e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 5.24e-05
+          }
+        },
+        "error": null,
+        "score": {
+          "value": 5,
+          "scorer": "manual",
+          "reasoning": null,
+          "judge_model": null,
+          "judge_usage": null,
+          "error": null,
+          "previous": null
+        }
+      },
+      {
+        "model": "gpt-6-luna",
+        "provider": "openai",
+        "seconds": 1.7621416999900248,
+        "stop_reason": "completed",
+        "response": "31",
+        "usage": {
+          "input_tokens": 29,
+          "output_tokens": 34,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0,
+          "reasoning_tokens": 27,
+          "total_tokens": 63,
+          "cost": {
+            "input_cost": 2.9e-06,
+            "output_cost": 1.7e-05,
+            "cache_write_cost": 0.0,
+            "cache_read_cost": 0.0,
+            "total_cost": 1.99e-05
+          }
+        },
+        "error": null,
+        "score": {
+          "value": 5,
+          "scorer": "manual",
+          "reasoning": null,
+          "judge_model": null,
+          "judge_usage": null,
+          "error": null,
+          "previous": null
+        }
+      }
+    ]
   }
 ]
