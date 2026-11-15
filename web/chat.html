@@ -244,7 +244,7 @@ button, input, textarea { font: inherit; color: inherit; }
         <div class="attach-row">
           <button type="button" id="context-add" class="btn" data-tip="Add images, PDFs or text files as context for the whole conversation. You can also drop files on this area. They share the 20 MB conversation limit with attachments.">Add context files</button>
           <input type="file" id="context-input" multiple hidden>
-          <span class="hint" tabindex="0" data-tip="Context files are resent and billed on every turn, like the rest of the conversation, so large ones make every turn more expensive.">Drop files here · resent every turn</span>
+          <span class="hint" tabindex="0" data-tip="Context files are resent on every turn, like the rest of the conversation. Claude models cache them: the first turn pays a little more than the normal input price for them (a cache write) and later turns pay the much lower cache-read price, as long as turns are less than 5 minutes apart. OpenAI models cache them automatically. Small files may be below a model's minimum and not cached. You can send the first message with no text, to send just the context files.">Drop files here · resent every turn</span>
         </div>
         <div id="context-files" class="attachments" aria-label="Context files for this conversation"></div>
       </div>
@@ -254,7 +254,7 @@ button, input, textarea { font: inherit; color: inherit; }
       <span class="composer-buttons">
         <span class="hint">Ctrl+Enter to send · every model checked is a billed call · each turn resends the whole conversation, so input tokens (and cost) grow every turn</span>
         <button type="button" id="clear" class="btn" disabled data-tip="Forget this conversation and start a new one with a new session id. You can then change the models, system prompt and logging. Turns already logged stay in the log.">Clear conversation</button>
-        <button type="submit" id="send" class="btn btn-primary" data-tip="Send the prompt to every model in the conversation. Each turn resends the whole history, so every turn costs a bit more than the last.">Send</button>
+        <button type="submit" id="send" class="btn btn-primary" data-tip="Send the prompt to every model in the conversation. Each turn resends the whole history, so every turn costs a bit more than the last. It waits until any files you added have finished loading.">Send</button>
       </span>
     </div>
   </form>
@@ -313,10 +313,12 @@ const TEXT_NAME = /\.(txt|text|md|markdown|csv|tsv|json|jsonl|xml|html?|css|js|m
 const MAX_BYTES = { image: 5_000_000, pdf: 10_000_000, text: 1_000_000 };
 const MAX_TOTAL_BYTES = 20_000_000;
 
-let pending = []; // attachments for the next message: { type, name, media_type, data, bytes }
+let pending = []; // attachments for the next message: { id, type, name, media_type, data, bytes }
 // Files for the whole conversation, same shape: sent at the start of every model's first message on every turn,
 // and fixed once the conversation starts
 let contextFiles = [];
+// How many addFiles calls are still reading files. Send waits for them, so a file being read can't miss the turn.
+let reading = 0;
 
 const sumBytes = (list) => list.reduce((s, a) => s + a.bytes, 0);
 
@@ -347,7 +349,25 @@ function conversationBytes() {
 
 // into is "message" (the next message's attachments) or "context" (the conversation's context files)
 async function addFiles(files, into = "message") {
-  if (into === "context" && session) return; // fixed until Clear conversation
+  if (into === "context" && session) {
+    showError("Context files are fixed for this conversation. Press Clear conversation to change them, or drop the file on the prompt box to attach it to your next message.");
+    return;
+  }
+  reading++;
+  updateControls();
+  try {
+    const problems = await readFiles(files, into);
+    if (into === "context") renderContext(); else renderPending();
+    if (problems.length) showError(problems.join(" "));
+    else if (!running) showNotice("");
+  } finally {
+    reading--;
+    updateControls();
+  }
+}
+
+// Reads files into the next message's attachments or the context files; returns what's wrong with any it skipped
+async function readFiles(files, into) {
   const target = into === "context" ? contextFiles : pending;
   const problems = [];
   for (const file of files) {
@@ -372,19 +392,27 @@ async function addFiles(files, into = "message") {
           problems.push(`${file.name}: looks like a binary file, not text.`);
           continue;
         }
-        target.push({ type, name: file.name, media_type: "text/plain", data: text, bytes: new TextEncoder().encode(text).length });
+        if (contextTooLate(into, file, problems)) continue;
+        target.push({ id: crypto.randomUUID(), type, name: file.name, media_type: "text/plain", data: text, bytes: new TextEncoder().encode(text).length });
       } else {
         const media_type = type === "pdf" ? "application/pdf" : file.type;
-        target.push({ type, name: file.name, media_type, data: await readBase64(file), bytes: file.size });
+        const data = await readBase64(file);
+        if (contextTooLate(into, file, problems)) continue;
+        target.push({ id: crypto.randomUUID(), type, name: file.name, media_type, data, bytes: file.size });
       }
     } catch (err) {
       problems.push(`${file.name}: couldn't be read (${err && err.message ? err.message : err}).`);
     }
   }
-  renderPending();
-  renderContext();
-  if (problems.length) showError(problems.join(" "));
-  else if (!running) showNotice("");
+  return problems;
+}
+
+// Send waits for files being read, so this shouldn't happen; but a context file that finished loading after the
+// conversation started would never be sent, so it isn't added
+function contextTooLate(into, file, problems) {
+  if (into !== "context" || !session) return false;
+  problems.push(`${file.name}: finished loading after the conversation started, so it isn't part of its context. Attach it to a message, or press Clear conversation and add it again.`);
+  return true;
 }
 
 function attachmentChip(a, { large = false, onRemove = null } = {}) {
@@ -448,12 +476,7 @@ $("composer").addEventListener("drop", (e) => {
   if (!e.dataTransfer.files.length) return;
   e.preventDefault();
   // Dropped on the context files area: context for the conversation (unless it's already fixed); anywhere else: the next message
-  const onContext = e.target.closest("#context-drop");
-  if (onContext && session) {
-    showError("Context files are fixed for this conversation. Press Clear conversation to change them, or drop the file on the prompt box to attach it to your next message.");
-    return;
-  }
-  addFiles([...e.dataTransfer.files], onContext ? "context" : "message");
+  addFiles([...e.dataTransfer.files], e.target.closest("#context-drop") ? "context" : "message");
 });
 
 // ---- Model picker ----
@@ -466,7 +489,8 @@ function updateControls() {
   $("models-count").textContent = session
     ? `${session.models.length} in this conversation`
     : `${checkedModels().length} of ${allModels.length} selected`;
-  $("send").disabled = running || (!session && checkedModels().length === 0);
+  $("send").disabled = running || reading > 0 || (!session && checkedModels().length === 0);
+  if (!running) $("send").textContent = reading ? "Loading files…" : "Send";
   $("clear").disabled = running || !session;
 }
 
@@ -591,6 +615,7 @@ function startTurn(turn, prompt, attachments) {
     const userMsg = el("div", { class: "user-msg" }, el("div", { class: "who", text: "You" }));
     if (attachments.length) userMsg.append(el("div", { class: "attachments" }, ...attachments.map((a) => attachmentChip(a, { large: true }))));
     if (prompt.trim()) userMsg.append(el("pre", { class: "response", text: prompt }));
+    else if (!attachments.length) userMsg.append(el("p", { class: "hint", text: "(no text: sent with just the context files)" }));
     const turnEl = el("div", { class: "turn" },
       el("div", { class: "turn-head" }, el("span", { class: "turn-label", text: `Turn ${turn}` }), costEl),
       userMsg,
@@ -640,8 +665,10 @@ function fillTurn(result) {
   if (kept) {
     const user = { role: "user", content: turn.prompt };
     if (turn.attachments.length) {
-      user.attachments = turn.attachments.map(wireAttachment);
-      session.historyBytes[result.model] += turn.attachments.reduce((s, a) => s + a.bytes, 0);
+      // By id: the request carries each file once in files, however many models' histories hold it
+      user.attachment_ids = turn.attachments.map((a) => a.id);
+      for (const a of turn.attachments) session.files[a.id] = a;
+      session.historyBytes[result.model] += sumBytes(turn.attachments);
     }
     session.histories[result.model].push(user, { role: "assistant", content: result.response });
   }
@@ -757,6 +784,8 @@ function newSession() {
     log: $("log").checked,
     context: contextFiles.slice(),
     histories: Object.fromEntries(models.map((m) => [m, []])),
+    // The attachments the histories refer to, by id
+    files: {},
     historyBytes: Object.fromEntries(models.map((m) => [m, 0])),
     modelCosts: Object.fromEntries(models.map((m) => [m, 0])),
     total: 0,
@@ -807,9 +836,29 @@ function undoTurn(prompt, attachments) {
   if (session.turn === 0) clearSession(true);
 }
 
+// Why the prompt can't be sent yet, or "" if it can
+function sendProblem(prompt) {
+  if (reading) return "Wait for the files to finish loading.";
+  if (!session && checkedModels().length === 0) return "Pick at least one model.";
+  if (prompt.trim() || pending.length) return "";
+  // With context files, the first message may be empty, e.g. to have the models summarise them. Later ones can't be:
+  // the models would be sent an empty message.
+  const context = session ? session.context : contextFiles;
+  const firstTurn = !session || session.models.every((m) => !session.histories[m].length);
+  if (context.length && firstTurn) return "";
+  return context.length
+    ? "Type a message or attach a file. Only the first message can be sent with just the context files."
+    : "Type a message or attach a file first.";
+}
+
 async function send() {
   const prompt = $("prompt").value;
-  if (running || (!prompt.trim() && !pending.length) || (!session && checkedModels().length === 0)) return;
+  if (running) return;
+  const problem = sendProblem(prompt);
+  if (problem) {
+    showError(problem);
+    return;
+  }
 
   running = true;
   showNotice("");
@@ -838,6 +887,7 @@ async function send() {
         log: session.log,
         session_id: session.id,
         histories: session.histories,
+        files: Object.fromEntries(Object.entries(session.files).map(([id, a]) => [id, wireAttachment(a)])),
         attachments: attachments.map(wireAttachment),
         context_files: session.context.map(wireAttachment),
       }),

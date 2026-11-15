@@ -81,6 +81,10 @@ def user_content(text, attachments=()):
                            "source": {"type": "text", "media_type": "text/plain", "data": a["data"]}})
         else:
             raise ValueError(f"Unsupported attachment type: {a['type']}")
+        # A cache breakpoint: everything up to and including this block is cached, so later requests that start
+        # the same way (e.g. the chat's context files) pay the cache-read rate for it
+        if a.get("cache"):
+            blocks[-1]["cache_control"] = {"type": "ephemeral"}
     # Files first, then the question about them, which is the order Claude's docs recommend
     if text:
         blocks.append({"type": "text", "text": text})

@@ -43,7 +43,8 @@ def add_assistant_message(messages, text):
 def user_content(text, attachments=()):
     # Turns a prompt and provider-neutral attachments into Responses API input parts; matches AnthropicAPI.user_content.
     # Each attachment is {"type": "image" | "pdf" | "text", "name", "media_type", "data"}: base64 for images and PDFs,
-    # plain text for text files.
+    # plain text for text files. An attachment's "cache" flag (a Claude cache breakpoint) is ignored: OpenAI caches
+    # the start of a repeated prompt by itself.
     if not attachments:
         return text
     parts = []
