@@ -3,6 +3,7 @@ import time
 import json
 import base64
 import binascii
+import socket
 import threading
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -845,6 +846,19 @@ class _LogViewerHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+class _LocalServer(ThreadingHTTPServer):
+    # HTTPServer turns on SO_REUSEADDR. On Linux and macOS that only lets a restarted server rebind quickly, but on
+    # Windows it lets a second server listen on a port that is already in use: both then answer requests, so a stale
+    # viewer (say, in a notebook kernel) or any other local program could take requests meant for this one, /run
+    # included. So on Windows the port is bound exclusively: binding fails if the port is in use, and nothing else can
+    # bind it while this server holds it. _ensure_server then moves on to the next port.
+    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+        allow_reuse_address = False
+
+        def server_bind(self):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            super().server_bind()
+
 _log_viewer_server = None
 # Two chat runs finishing together would otherwise both read the log, and one run would be lost
 _log_lock = threading.Lock()
@@ -857,12 +871,14 @@ def _ensure_server(log_file, port):
     if _log_viewer_server is None:
         for candidate in range(port, port + 10):
             try:
-                _log_viewer_server = ThreadingHTTPServer(("127.0.0.1", candidate), _LogViewerHandler)
+                _log_viewer_server = _LocalServer(("127.0.0.1", candidate), _LogViewerHandler)
                 break
             except OSError:
                 continue
         else:
             raise OSError(f"No free port between {port} and {port + 9}")
+        if candidate != port:
+            print(f"Port {port} is in use (another viewer, perhaps in a notebook kernel?); using {candidate}")
         # Daemon thread so a notebook cell returns straight away and the server stops with the kernel
         threading.Thread(target=_log_viewer_server.serve_forever, daemon=True).start()
 
