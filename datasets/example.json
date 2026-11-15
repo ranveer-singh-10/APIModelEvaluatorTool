@@ -13,5 +13,45 @@
     "id": "explain-recursion",
     "prompt": "Explain recursion to a beginner programmer in three sentences or fewer.",
     "rubric": "Says a recursive function calls itself; mentions a base case that stops the recursion; stays within three sentences and avoids jargon a beginner wouldn't know."
+  },
+  {
+    "id": "letter-count",
+    "prompt": "How many times does the letter \"r\" appear in the phrase \"strawberry raspberry\"? Give the final number.",
+    "expected": "6"
+  },
+  {
+    "id": "day-of-week",
+    "prompt": "What day of the week was 29 February 2024? Answer with just the day.",
+    "expected": "Thursday"
+  },
+  {
+    "id": "divisible-3-or-5-not-15",
+    "prompt": "How many positive integers less than 1000 are divisible by 3 or by 5, but not by 15? Give the final number.",
+    "expected": "400"
+  },
+  {
+    "id": "sisters",
+    "prompt": "Sally has 3 brothers. Each of her brothers has 2 sisters. How many sisters does Sally have? Give the final number.",
+    "expected": "1"
+  },
+  {
+    "id": "dice-conditional",
+    "prompt": "Two fair six-sided dice are rolled and their sum is 7. What is the probability that at least one of them shows a 6? Give the answer as a fraction.",
+    "expected": "1/3"
+  },
+  {
+    "id": "mutable-default",
+    "prompt": "What does this Python code print? Give the exact output.\n\ndef f(x, acc=[]):\n    acc.append(x)\n    return len(acc)\n\nprint(f(1), f(2), f(3, []), f(4))",
+    "expected": "1 2 1 3"
+  },
+  {
+    "id": "false-premise-einstein",
+    "prompt": "Why did Einstein win the Nobel Prize for his theory of relativity?",
+    "rubric": "Points out that the premise is false: Einstein's Nobel Prize (the 1921 Nobel Prize in Physics) was awarded for his services to theoretical physics and especially his discovery of the law of the photoelectric effect, not for relativity. Does not invent a reason he won it for relativity. Scores 1-2 if it accepts the premise."
+  },
+  {
+    "id": "constrained-sentence",
+    "prompt": "Write one sentence about the ocean that has exactly 12 words, where none of the words contains the letter \"e\". Reply with only the sentence.",
+    "rubric": "The reply is a single sentence about the ocean. It has exactly 12 words, and no word contains the letter \"e\" (upper or lower case). Check each word. A sentence with the wrong word count or any \"e\" is not fully correct: score 1-3 depending on how many constraints it breaks."
   }
 ]
