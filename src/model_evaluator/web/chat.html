@@ -305,7 +305,7 @@ function showError(text) {
 }
 
 // ---- Attachments ----
-// Same shapes and limits as evaluation.py checks: {type: image | pdf | text, name, media_type, data},
+// Same shapes and limits as attachments.py checks: {type: image | pdf | text, name, media_type, data},
 // base64 for images and PDFs, plain text for text files.
 
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
@@ -547,7 +547,7 @@ async function loadModels() {
   } catch (err) {
     $("models").replaceChildren(el("span", { class: "hint", text: "No models loaded." }));
     showNotice("Couldn't load the model list. Open this page through the local server: run " +
-      "<code>chat_ui()</code> from <code>evaluation.py</code> or the notebook.");
+      "<code>model-eval chat</code>, or <code>chat_ui()</code> from Python or the notebook.");
     $("send").disabled = true;
   }
 }

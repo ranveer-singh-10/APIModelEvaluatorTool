@@ -1,4 +1,19 @@
+# Secrets
 .env
+
+# Python
 .venv/
 __pycache__/
-.idea/workspace.xml
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# Run logs (personal, and they can hold prompts and responses)
+logs/
