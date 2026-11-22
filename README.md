@@ -171,7 +171,7 @@ datasets/                Evaluation cases
 ## Development
 
 ```bash
-pytest                 # 111 tests, no network calls
+pytest                 # 120 tests, no network calls
 ruff check .           # lint
 ruff format .          # format
 ```

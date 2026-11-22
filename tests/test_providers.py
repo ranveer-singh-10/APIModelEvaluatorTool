@@ -1,6 +1,9 @@
 from types import SimpleNamespace as NS
 
 import pytest
+from openai import ContentFilterFinishReasonError, LengthFinishReasonError
+from openai._models import construct_type
+from openai.types.chat import ChatCompletion
 
 from model_evaluator.providers import (
     PROVIDERS,
@@ -201,3 +204,140 @@ def test_openrouter_unpriced_model_with_reported_cost():
     cost = openrouter_api.estimate_cost("vendor/unpriced", openrouter_usage(10, 10, cost=0.01))
     assert cost["total_cost"] == 0.01
     assert cost["estimated_total_cost"] is None
+
+
+# ---------- OpenRouter error and streaming handling (fake client, no API calls) ----------
+
+
+def openrouter_completion(content="The answer is 42", finish_reason="stop", usage=True, choice_error=None, error=None):
+    """A ChatCompletion built the way the SDK builds real responses (leniently, keeping OpenRouter's extra fields)."""
+    choice = {"index": 0, "finish_reason": finish_reason, "message": {"role": "assistant", "content": content}}
+    if choice_error:
+        choice["error"] = choice_error
+    value = {"id": "x", "object": "chat.completion", "created": 0, "model": "m", "choices": [choice]}
+    if usage:
+        value["usage"] = {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15, "cost": 0.001}
+    if error:
+        value["error"] = error
+    return construct_type(type_=ChatCompletion, value=value)
+
+
+class FakeStream:
+    def __init__(self, deltas=(), final=None, raise_in_loop=None, raise_at_end=None):
+        self.deltas, self.final = deltas, final
+        self.raise_in_loop, self.raise_at_end = raise_in_loop, raise_at_end
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def __iter__(self):
+        for delta in self.deltas:
+            yield NS(type="content.delta", delta=delta)
+        if self.raise_in_loop:
+            raise self.raise_in_loop
+
+    def get_final_completion(self):
+        if self.raise_at_end:
+            raise self.raise_at_end
+        return self.final
+
+
+@pytest.fixture
+def fake_openrouter(monkeypatch):
+    """Install a fake client; returns a function that sets what it answers and records the request params."""
+    sent = {}
+
+    def install(stream=None, completion=None):
+        def record(answer):
+            def call(**params):
+                sent.update(params)
+                return answer
+
+            return call
+
+        client = NS(chat=NS(completions=NS(stream=record(stream), create=record(completion))))
+        monkeypatch.setattr(openrouter_api, "_client", client)
+        return sent
+
+    return install
+
+
+def test_openrouter_normal_reply(fake_openrouter):
+    fake_openrouter(completion=openrouter_completion())
+    text, usage = openrouter_api.chat([], stream=False, return_usage=True)
+    assert text == "The answer is 42"
+    assert usage["cost"]["total_cost"] == 0.001
+
+
+@pytest.mark.parametrize(
+    ("completion", "message"),
+    [
+        # A provider that fails mid-generation: OpenRouter puts the error on the choice
+        (openrouter_completion(finish_reason="error", choice_error={"code": 502, "message": "Upstream died"}),
+         "Upstream died"),
+        (openrouter_completion(finish_reason="error"), "failed during generation"),
+        (openrouter_completion(error={"code": 500, "message": "Top-level failure"}), "Top-level failure"),
+    ],
+)  # fmt: skip
+def test_openrouter_errors_in_a_200_body_raise(fake_openrouter, completion, message):
+    fake_openrouter(completion=completion)
+    with pytest.raises(RuntimeError, match=message):
+        openrouter_api.chat([], stream=False)
+
+
+def test_openrouter_streamed_reply_cut_off_by_max_tokens_is_kept(fake_openrouter, capsys):
+    final = openrouter_completion(content="The answer is 42 and", finish_reason="length")
+    sent = fake_openrouter(
+        stream=FakeStream(["The answer is ", "42 and"], raise_at_end=LengthFinishReasonError(completion=final))
+    )
+
+    response, usage = openrouter_api.chat([], stream=True, return_full_response=True, return_usage=True)
+
+    assert openrouter_api.text_from_response(response) == "The answer is 42 and"
+    assert openrouter_api.stop_reason(response) == "length"
+    assert usage["cost"]["total_cost"] == 0.001
+    assert sent["stream_options"] == {"include_usage": True}
+    assert capsys.readouterr().out == "The answer is 42 and\n"
+
+
+def test_openrouter_mid_stream_cut_off_keeps_text_but_has_no_usage(fake_openrouter):
+    # With strict function tools the SDK raises mid-stream, before the usage chunk arrives
+    snapshot = openrouter_completion(content="partial", finish_reason="length", usage=False)
+    install = fake_openrouter
+
+    install(stream=FakeStream(["partial"], raise_in_loop=LengthFinishReasonError(completion=snapshot)))
+    assert openrouter_api.chat([], stream=True) == "partial"
+
+    install(stream=FakeStream(["partial"], raise_in_loop=LengthFinishReasonError(completion=snapshot)))
+    with pytest.raises(RuntimeError, match="no usage"):
+        openrouter_api.chat([], stream=True, return_usage=True)
+
+
+def test_openrouter_content_filter_without_a_completion_still_raises(fake_openrouter):
+    fake_openrouter(stream=FakeStream(raise_at_end=ContentFilterFinishReasonError()))
+    with pytest.raises(ContentFilterFinishReasonError):
+        openrouter_api.chat([], stream=True)
+
+
+# ---------- Anthropic response helpers ----------
+
+
+def test_anthropic_text_from_response_keeps_cited_sentences_whole():
+    # With web search, Claude splits one answer into text blocks around each citation
+    response = NS(
+        content=[
+            NS(type="text", text="Canberra is "),
+            NS(type="web_search_tool_result"),
+            NS(type="text", text="the capital."),
+        ]
+    )
+    assert anthropic_api.text_from_response(response) == "Canberra is the capital."
+
+
+def test_anthropic_show_web_search_response_without_a_search(capsys):
+    response = NS(stop_reason="end_turn", usage=NS(server_tool_use=None), content=[])
+    anthropic_api.show_web_search_response(response)
+    assert "Searches used: 0" in capsys.readouterr().out

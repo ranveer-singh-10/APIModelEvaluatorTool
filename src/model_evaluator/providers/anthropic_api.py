@@ -121,8 +121,12 @@ def tool_results(response: Message, outputs: dict[str, str], is_error: bool = Fa
 
 
 def text_from_response(response: Message) -> str:
-    """Join the text blocks of a response, one per line."""
-    return "\n".join(block.text for block in response.content if block.type == "text")
+    """Join the text blocks of a response.
+
+    They're joined with nothing between them: with web search, Claude splits one answer into blocks around each
+    citation, so a separator would break sentences.
+    """
+    return "".join(block.text for block in response.content if block.type == "text")
 
 
 def stop_reason(response: Message) -> str | None:
@@ -132,7 +136,9 @@ def stop_reason(response: Message) -> str | None:
 def show_web_search_response(response: Message) -> None:
     """Print the searches, results, text and citations of a response that used the web search tool."""
     print(f"stop_reason: {response.stop_reason}")
-    print(f"Searches used: {response.usage.server_tool_use.web_search_requests}\n")
+    # server_tool_use is None when Claude answered without using a server tool
+    server_tool_use = response.usage.server_tool_use
+    print(f"Searches used: {server_tool_use.web_search_requests if server_tool_use else 0}\n")
 
     for block in response.content:
         if block.type == "server_tool_use":
@@ -261,7 +267,7 @@ def chat(
     else:
         final = client.messages.create(**params)
 
-    result = final if return_full_response else "".join(b.text for b in final.content if b.type == "text")
+    result = final if return_full_response else text_from_response(final)
     if return_usage:
         return result, usage_summary(model, final.usage)
     return result

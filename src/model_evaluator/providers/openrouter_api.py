@@ -10,7 +10,7 @@ import os
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from openai import OpenAI
+from openai import ContentFilterFinishReasonError, LengthFinishReasonError, OpenAI
 
 DEFAULT_MODEL = "deepseek/deepseek-v4.1-flash-1017"
 BASE_URL = "https://openrouter.ai/api/v1"
@@ -116,12 +116,25 @@ def stop_reason(response: Any) -> str | None:
     return response.choices[0].finish_reason if response.choices else None
 
 
+def _error_message(error: Any) -> str:
+    return str(error.get("message") or error) if isinstance(error, dict) else str(error)
+
+
 def _check_error(response: Any) -> None:
-    # OpenRouter can report a failure inside an HTTP 200 body, e.g. when a provider fails after the response started
+    """Raise on a failure OpenRouter reports inside an HTTP 200 body.
+
+    It can put the error at the top level, or, when a provider fails after it started generating, on the choice
+    (``finish_reason: "error"``, with the details in ``choices[i].error``). Either way the call failed: its partial
+    text mustn't be graded as an answer.
+    """
     error = getattr(response, "error", None)
     if error:
-        message = error.get("message") if isinstance(error, dict) else str(error)
-        raise RuntimeError(f"OpenRouter error: {message}")
+        raise RuntimeError(f"OpenRouter error: {_error_message(error)}")
+    for choice in getattr(response, "choices", None) or []:
+        choice_error = getattr(choice, "error", None)
+        if choice_error or choice.finish_reason == "error":
+            detail = _error_message(choice_error) if choice_error else "the provider failed during generation"
+            raise RuntimeError(f"OpenRouter error: {detail}")
 
 
 # ---------- Usage and cost ----------
@@ -242,15 +255,27 @@ def chat(
 
     client = _get_client()
     if stream:
+        # Ask for the usage chunk explicitly, so return_usage works when streaming too
+        params["stream_options"] = {"include_usage": True}
         with client.chat.completions.stream(**params) as chat_stream:
-            # One pass over the events, as in the other modules
-            for event in chat_stream:
-                if event.type == "content.delta":
-                    print(event.delta, end="", flush=True)
-                elif event.type == "tool_calls.function.arguments.delta":
-                    print(event.arguments_delta, end="", flush=True)
-            print()
-            final = chat_stream.get_final_completion()
+            try:
+                # One pass over the events, as in the other modules
+                for event in chat_stream:
+                    if event.type == "content.delta":
+                        print(event.delta, end="", flush=True)
+                    elif event.type == "tool_calls.function.arguments.delta":
+                        print(event.arguments_delta, end="", flush=True)
+                final = chat_stream.get_final_completion()
+            except (LengthFinishReasonError, ContentFilterFinishReasonError) as e:
+                # The SDK's stream helper raises on these finish reasons, but the reply was streamed and paid for, so
+                # keep it: it comes back with stop_reason "length" / "content_filter", as it does without streaming.
+                # Raised at the end of the stream, the completion has its usage. Raised mid-stream (only with strict
+                # function tools), the usage chunk hasn't arrived, so return_usage then fails clearly below.
+                if e.completion is None:
+                    raise
+                final = e.completion
+            finally:
+                print()
     else:
         final = client.chat.completions.create(**params)
     _check_error(final)
